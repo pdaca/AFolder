@@ -2,7 +2,7 @@
 Solver for Array Folds Logic
 
 This software is distributed under the MIT Licences.
-Copyright (c) 2016 Przemyslaw Daca (przemek.daca@gmail.com)
+Copyright (c) 2016 Przemyslaw Daca.
 
 Compilation:
 You need the Z3 C++ library installed. Type 'make' to compile.
