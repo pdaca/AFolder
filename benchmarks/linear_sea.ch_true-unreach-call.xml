@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- c2=1 if array[s1] =3 -->
+<!-- c1 - index, c2 - result -->
+<function name="setval" counters="2" symbolic="1">
+
+  <case>
+    <ctr_constraint counter="1" relation="LT" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case>
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="3"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <case>
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <symbol_constraint relation="NEQ" numeric="3"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case>
+    <ctr_constraint counter="1" relation="GT" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+</function>
+
+
+<function name="linear_search" counters="2" symbolic="1" modes="2">
+
+  <!-- i<s2 && a[i]!=3 -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="LT" symbolic="1"/>
+    <symbol_constraint relation="NEQ" numeric="3"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+
+  <!-- i=s2 -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+
+  <!-- i<s2, a[i]=3 -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="LT" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="3"/>
+    <ctr_update counter="2" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <!-- break -->
+  <case mode="2"/>
+
+</function>
+
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

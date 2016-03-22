@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<function name="count" counters="1" symbolic="2">
+
+
+  <case>
+    <symbol_constraint relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="LT" symbolic="2"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="LT" symbolic="1"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="GEQ" symbolic="2"/>
+  </case>
+
+</function>
+
+<function name="count_open" counters="1" symbolic="1">
+
+  <!-- index is in the range, and the element is non-positive -->
+  <case>
+    <symbol_constraint relation="GEQ" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="LT" symbolic="1"/>
+  </case>
+
+</function>
+
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

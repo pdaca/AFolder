@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- count the number of postive elements in the range [s1,s2], where s1<=s2 -->
+<function name="count" counters="2" symbolic="2">
+
+  <!-- the index is before the range -->
+  <case>
+    <ctr_constraint counter="2" relation="LT" symbolic ="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <!-- index is in the range, and the element is non-positive -->
+  <case>
+    <ctr_constraint counter="2" relation="GEQ" symbolic ="1"/>
+    <ctr_constraint counter="2" relation="LEQ" symbolic ="2"/>
+    <symbol_constraint relation="LEQ" numeric="0"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+
+  <!-- index is in the range, and the element is positive -->
+  <case>
+    <ctr_constraint counter="2" relation="GEQ" symbolic ="1"/>
+    <ctr_constraint counter="2" relation="LEQ" symbolic ="2"/>
+    <symbol_constraint relation="GT" numeric="0"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <!-- the index is after the range -->
+  <case>
+    <ctr_constraint counter="2" relation="GT" symbolic ="2"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+</function>
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- count the number of postive elements in the range [s1,s2], where s1<=s2 -->
+<function name="count2" counters="2" symbolic="2">
+
+  <!-- the index is before the range -->
+  <case>
+ <ctr_constraint counter="2" relation="LT" symbolic ="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <!-- index is in the range, and the element is non-positive -->
+  <case>
+    <ctr_constraint counter="2" relation="LEQ" symbolic ="2"/>
+    <symbol_constraint relation="LEQ" numeric="0"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+
+  <!-- index is in the range, and the element is positive -->
+  <case>
+    <symbol_constraint relation="GT" numeric="0"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <!-- the index is after the range -->
+  <case>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+</function>
+
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

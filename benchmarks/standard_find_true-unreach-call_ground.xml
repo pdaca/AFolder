@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- c1=first index i where a[i]=e -->
+<function name="loop" counters="1" symbolic="1" modes="2">
+
+  <case mode="1">
+    <symbol_constraint relation="NEQ" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="2"/>
+
+</function>
+
+
+ <!-- iterates i up to c1 and sets c2=1 if a[i] = s1  -->
+<function name="check" counters="2" symbolic="1" modes="2">
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GT" numeric="0"/>
+    <symbol_constraint relation="NEQ" symbolic="1"/>
+    <ctr_update counter="1" numeric="-1"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GT" numeric="0"/>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <ctr_update counter="2" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" numeric="0"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="2"/>
+
+</function>
+
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

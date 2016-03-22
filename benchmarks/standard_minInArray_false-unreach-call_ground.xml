@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<!-- counter 1 returns value 1 iff -->
+<!-- there is some element equal to s1, and none is smaller -->
+<function name="find_min" counters="1" symbolic="1">
+
+  <case>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="EQ" numeric="0"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="GT" numeric="0"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="LT" symbolic="1"/>
+    <ctr_update counter="1" numeric="2"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="GT" symbolic="1"/>
+  </case>
+  
+</function>
+
+
+<function name="assert_min" counters="1" symbolic="1">
+
+  <case>
+    <symbol_constraint relation="LT" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case>
+    <symbol_constraint relation="GEQ" symbolic="1"/>
+  </case>
+
+
+  
+</function>
+
+
+
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

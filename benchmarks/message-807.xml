@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- init. values of c1, c2 specify the start end index. -->
+<function name="while" counters="3" symbolic="1" modes="3">
+
+  <!-- rewind to the inital index -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GT" numeric="0"/>
+    <ctr_constraint counter="2" relation="GT" numeric="0"/>
+    <ctr_update counter="1" numeric="-1"/>
+    <ctr_update counter="2" numeric="-1"/>
+    <ctr_update counter="3" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" numeric="0"/>
+    <ctr_constraint counter="2" relation="GT" numeric="0"/>    
+    <symbol_constraint relation="NEQ" symbolic="1"/>
+    <ctr_update counter="2" numeric="-1"/>
+    <ctr_update counter="3" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GT" numeric="0"/>
+    <ctr_constraint counter="2" relation="EQ" numeric="0"/>
+    <mode_update mode="3"/>
+    </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" numeric="0"/>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <case mode="2">
+    <ctr_constraint counter="2" relation="GT" numeric="0"/>
+    <symbol_constraint relation="NEQ" symbolic="1"/>
+    <ctr_update counter="2" numeric="-1"/>
+    <ctr_update counter="3" numeric="1"/>
+  </case>
+
+  <case mode="2">
+    <ctr_constraint counter="2" relation="EQ" numeric="0"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <case mode="2">
+    <ctr_constraint counter="2" relation="GT" numeric="0"/>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <mode_update mode="3"/>
+  </case>
+
+
+  <!-- break -->
+  <case mode="3"/>
+
+</function>
+
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

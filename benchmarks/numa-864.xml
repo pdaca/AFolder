@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- init. values of c1, c2 specify the start end index. -->
+<function name="count_process_nodes" counters="1" symbolic="0">
+
+  <case>
+    <symbol_constraint relation="EQ" numeric="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+    <case>
+    <symbol_constraint relation="EQ" numeric="0"/>
+  </case>
+
+</function>
+
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+
