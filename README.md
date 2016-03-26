@@ -7,8 +7,8 @@ Copyright (c) 2016 Przemyslaw Daca.
 Compilation:
 You need the Z3 C++ library installed. Type 'make' to compile.
 
-Example usage:
-./afolder benchmarks/markdown.smt benchmarks/markdown.xml -m
+Usage example :
+./afolder benchmarks/markdown2.smt benchmarks/markdown2.xml -m
 
 This software is based on TinyXML library
 (http://www.grinninglizard.com/tinyxml/)
