@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- character encoding 1 - '\n', 2 - '|', 3 - ':', 4 - '+', 5 -'-'-->
+
+<!--  while (i < size && a[i] != '\n') -->
+<!--    if (a[i++] == '|') pipes++; -->
+<function name="f1" counters="2" symbolic="0" modes="2"> <!-- (i, p) -->
+
+  <!-- if symbol '\n' then stop -->
+  <case mode="1">
+    <symbol_constraint relation="EQ" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <!-- do nothing -->
+  <case mode="2"/>
+
+  <!-- if '|' increase p and i-->
+  <case mode="1">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="1"/>    
+  </case>
+
+  <!-- if not '|' nor '\n' then increase i-->
+  <case mode="1">
+    <symbol_constraint relation="NEQ" numeric="1"/>
+    <symbol_constraint relation="NEQ" numeric="2"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+</function>
+
+
+<function name="len" counters="1" symbolic="0" modes="1">
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+</function>
+
+
+<!-- if (a[0] == '|') -->
+<function name="f2" counters="1" symbolic="0" modes="2"> 
+  <case mode="1">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="NEQ" numeric="2"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="2"/>
+
+</function>
+
+
+<!-- if (a[i] == '|') -->
+<function name="f3" counters="1" symbolic="0" modes="2"> <!-- c1=result -->
+  <case mode="1">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="NEQ" numeric="2"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <case mode="2"/>
+
+</function>
+
+
+<!-- ;  while (end < size && a[end] != '\n') end++; -->
+<function name="f4" counters="1" symbolic="1" modes="2"> <!-- c0=end result (init to 0), s1=init value of end -->
+
+  <case mode="1">
+    <symbol_constraint relation="LT" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="1"/>
+    <mode_update mode="2"/>    
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="NEQ" numeric="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <!-- do nothing -->
+  <case mode="2">
+  </case>
+</function>
+
+
+<function name="finner0" counters="1" symbolic="1" modes="4"> <!-- (c1=i, s1=init i) -->
+
+  <!-- iterate to initial i -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="LT" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <!-- if a[i] = ':' then i++ -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="3"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <!-- if a[i] = '-'  then i++ -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="5"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <!-- if a[i] == '+' then end -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="4"/>
+    <mode_update mode="3"/>
+  </case>
+
+
+  <!-- if a[i] == '|' then end -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <mode_update mode="3"/>
+  </case>
+
+
+  <!-- if a[i] = '-'  then i++ -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="5"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <!-- if a[i] = '+'  then end -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="4"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <!-- if a[i] = '|'  then end -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <mode_update mode="3"/>
+  </case>
+
+    <!-- if a[i] = ':'  then i++ -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="4"/>
+  </case>
+
+
+  <!-- if a[i] = '+'  then end -->
+  <case mode="4">
+    <symbol_constraint relation="EQ" numeric="4"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <!-- if a[i] = '|'  then end -->
+  <case mode="4">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <mode_update mode="3"/>
+  </case>
+  
+
+  <!-- done -->
+  <case mode="3"/>
+  
+</function>
+
+
+
+<function name="finner" counters="2" symbolic="1" modes="4"> <!-- (c1=i, c2=break, s1=init i) -->
+
+  <!-- iterate to initial i -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="LT" symbolic="1"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <!-- if a[i] = ':' then i++ -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="3"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <!-- if a[i] = '-'  then i++ -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="5"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="2"/>
+  </case>
+
+  <!-- if a[i] == '+' then end -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="4"/>
+    <mode_update mode="3"/>
+  </case>
+
+
+  <!-- if a[i] == '|' then end -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <mode_update mode="3"/>
+  </case>
+
+
+  <!-- if a[i] != ':,-,+,|' the break -->
+  <case mode="1">
+    <ctr_constraint counter="1" relation="GEQ" symbolic="1"/>
+    <symbol_constraint relation="NEQ" numeric="2"/>
+    <symbol_constraint relation="NEQ" numeric="3"/>
+    <symbol_constraint relation="NEQ" numeric="4"/>
+    <symbol_constraint relation="NEQ" numeric="5"/>
+    <ctr_update counter="2" numeric="1"/>
+    <mode_update mode="3"/>
+  </case>
+
+
+  <!-- if a[i] = '-'  then i++ -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="5"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <!-- if a[i] = '+'  then end -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="4"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <!-- if a[i] = '|'  then end -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <mode_update mode="3"/>
+  </case>
+
+    <!-- if a[i] = ':'  then i++ -->
+  <case mode="2">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <ctr_update counter="1" numeric="1"/>
+    <mode_update mode="4"/>
+  </case>
+
+  <!-- if a[i] != ':,-,+,|' then break -->
+  <case mode="2">
+    <symbol_constraint relation="NEQ" numeric="2"/>
+    <symbol_constraint relation="NEQ" numeric="3"/>
+    <symbol_constraint relation="NEQ" numeric="4"/>
+    <symbol_constraint relation="NEQ" numeric="5"/>
+    <ctr_update counter="2" numeric="1"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <!-- if a[i] = '+'  then end -->
+  <case mode="4">
+    <symbol_constraint relation="EQ" numeric="4"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <!-- if a[i] = '|'  then end -->
+  <case mode="4">
+    <symbol_constraint relation="EQ" numeric="2"/>
+    <mode_update mode="3"/>
+  </case>
+  
+    <!-- if a[i] != '+,|' then break -->
+  <case mode="4">
+    <symbol_constraint relation="NEQ" numeric="2"/>
+    <symbol_constraint relation="NEQ" numeric="4"/>
+    <ctr_update counter="2" numeric="1"/>
+    <mode_update mode="3"/>
+  </case>
+
+  <!-- done -->
+  <case mode="3"/>
+  
+</function>
+
+

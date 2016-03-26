@@ -111,8 +111,9 @@
 ;   i++; dashes++; //column_data[col] |= MKD_TABLE_ALIGN_R;
 ; }
 ; if (i < end && a[i] != '|' && a[i] != '+') break;
+(declare-const finner Rel)
 (declare-const i6 Int)
-(assert (fold_1_1 finner0 A1 0 (- i6 i2) (- i5 i2)))
+(assert (fold_2_1 finner A1 0 0 (- i6 i2) 0 (- i5 i2)))
 ; dashes increase as much as index
 (declare-const dashes1 Int)
 (assert (= dashes1 (- i6 i5)))
@@ -127,40 +128,5 @@
 (declare-const col2 Int)
 (assert (= col2 (+ col1 1)))
 
-; -- third iteraton ---
-; for (col = 0; col<pipes && i<end; ++col) {
-;   size_t dashes = 0;
-(assert (< i7 end1))
-(assert (< col2 pipes2))
-
-; if (a[i] == ':') {
-;   i++; dashes++; //column_data[col] |= MKD_TABLE_ALIGN_L; 
-; }
-;
-; while (i < end && a[i] == '-') { i++; dashes++; }
-;
-; if (a[i] == ':') {
-;   i++; dashes++; //column_data[col] |= MKD_TABLE_ALIGN_R;
-; }
-; if (i < end && a[i] != '|' && a[i] != '+') break;
-(declare-const finner Rel)
-(declare-const i8 Int)
-(declare-const break0 Int)
-(assert (fold_2_1 finner A1 0 0 (- i8 i2) break0 (- i7 i2)))
-; dashes increase as much as index
-(declare-const dashes2 Int)
-(assert (= dashes2 (- i8 i7)))
-
-; if (dashes < 3) break;
-(assert (> dashes2 2))
-
-; i++;
-(declare-const i9 Int)
-(assert (= i9 (+ i8 1)))
-
-(declare-const col3 Int)
-(assert (= col3 (+ col2 1)))
-
 ; no more iterations
-(assert (or (>= col3 pipes2) (>= i9 end1)))
-
+(assert (or (>= col2 pipes2) (>= i7 end1)))
