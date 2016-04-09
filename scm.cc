@@ -324,7 +324,8 @@ namespace fold {
   
 
   SCM<SymbolFrm> parallel(const SCM<SymbolFrm>& cm1,
-			  const SCM<SymbolFrm>& cm2){
+			  const SCM<SymbolFrm>& cm2,
+			  bool doSfSat){
     uint counters_no1 = cm1.counters_no();
     state_t init_state1 = cm1.init_state();
     uint scons1 = cm1.sym_constants_no();
@@ -413,8 +414,10 @@ namespace fold {
 	  pair<bool, uint> res;
 	  if (elem_a == alphabet_map.end()){
 	    //TODO do some pre-sat check
-	    bool sat = checkSfSat(sf, scons);
-	    //	    bool sat = true;
+	    bool sat = true;
+	    if (doSfSat){
+	      sat = checkSfSat(sf, scons);
+	    }
 #ifdef DEBUG
 	    if (!sat) {
 	      std::cout << "SF " << sf << " is unsat" << std::endl;

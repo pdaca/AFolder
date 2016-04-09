@@ -36,7 +36,13 @@ using std::chrono::milliseconds;
 using namespace fold;
 using namespace z3;
 
+string USAGE_STR =  " formula.smt functions.xml [-model|-nosfsat|-help] \n\nOPTIONS: \n-model		Generate model. \n-nosfsat	Do not use sat check to prune parallel composition.";
+
 int app_no;
+// Generate model
+bool domodel;
+// Prune unsatisfiable symbolic formulas when doing parallel composition
+bool dosfsat;
 
 /* Get number of counters and symbolic constants of the fold */
 pair<uint, uint> getFoldParams(const string& name){
@@ -183,7 +189,7 @@ void addCmForArrFormula(solver &s,
       
       int old_k = comp.counters_no();
       int old_symid = comp.sym_constants_no();
-      comp = parallel(comp, cm);
+      comp = parallel(comp, cm, dosfsat);
       
 #ifdef DEBUG
       comp.check();
@@ -297,7 +303,7 @@ void addTranslatedFormula(const expr& fml, solver& s,
 }
 
 
-void flsat(const char *filesmt, const char *filexml, bool dosat, bool domodel){
+void flsat(const char *filesmt, const char *filexml){
 
   context ctx;
   solver s(ctx);
@@ -318,9 +324,6 @@ void flsat(const char *filesmt, const char *filexml, bool dosat, bool domodel){
   
   cons_time =
     duration_cast<milliseconds>(high_resolution_clock::now() - tmr1 ).count();
-  
-  if (!dosat)
-    return;
   
   auto tmr2  = high_resolution_clock::now();
   check_result res = s.check();
@@ -371,20 +374,37 @@ void flsat(const char *filesmt, const char *filexml, bool dosat, bool domodel){
 
 int main(int argc, char * argv[]) {  
   if (argc < 3) {
-    cerr << "USAGE: " << argv[0] << " formula.smt functions.xml [-model]" << endl;
+    cerr << "USAGE: " << argv[0] << USAGE_STR << endl;
     return 1;
   }
 
-  bool dosat = true;
-  bool domodel = false;
-  if (argc >= 4){
+  domodel = false;
+  dosfsat = true;
 
-    if ((strcmp(argv[3], "-model") == 0) || (strcmp(argv[3], "-m") == 0)){
+  for (int i = 3; i<argc; i++){
+    char* arg = argv[i];
+    
+    if ((strcmp(arg, "-model") == 0) || (strcmp(arg, "-m") == 0)){
       domodel = true;
     }
+    else if (strcmp(arg, "-nosfsat") == 0){
+      dosfsat = false;
+    }
+    else if (strcmp(arg, "-sfsat") == 0){
+      dosfsat = true;
+    }
+    else if ((strcmp(arg, "-help") == 0) || (strcmp(arg, "-h") == 0)){
+      cerr << "USAGE: " << argv[0] << USAGE_STR << endl;
+      return 0;
+    }
+    else {
+      cerr << "ERROR: unkown option " << arg << endl;
+      return 1;
+    }
+
   }
 
-  flsat(argv[1], argv[2], dosat, domodel);
+  flsat(argv[1], argv[2]);
 
   return 0;
 }

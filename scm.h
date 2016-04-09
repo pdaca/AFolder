@@ -184,7 +184,8 @@ namespace fold {
   
   // Computes parallel composition of two CM's defined over the same alphabet.
   SCM<SymbolFrm> parallel(const SCM<SymbolFrm>& cm1,
-			  const SCM<SymbolFrm>& cm2);
+			  const SCM<SymbolFrm>& cm2,
+			  bool doSfSat);
 
 
   // Collection of information about a SCM.
