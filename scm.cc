@@ -197,7 +197,8 @@ namespace fold {
   std::ostream& operator<<(std::ostream& os, const CmAction& cma){
     return os << "letter=" << cma.letter_id_ << "," <<cma.ccs_
 	      << ",succ=" << cma.succ_
-	      << ",add=" << cma.addition_;
+	      << ",add=" << cma.addition_
+	      << ",add_elem=" << cma.add_element_;
   }
 
 
@@ -455,7 +456,7 @@ namespace fold {
 	    ccs.insert(nsc);
 	  }
 
-	  vector<int> add (counters_no);
+	  vector<int> add(counters_no);
 	  for (uint i=0; i<counters_no1; i++)
 	    add[i] = add1[i];
 	  
@@ -473,8 +474,11 @@ namespace fold {
 	  } else {
 	    succ = elem->second;
 	  }
+
+	  // TODO
+	  vector<bool> add_element(counters_no);
 	  
-	  CmAction cam {letter_id, ccs, succ, add};
+	  CmAction cam {letter_id, ccs, succ, add, add_element};
 	  if (succ >= tr.size()){
 	    tr.push_back(deque<CmAction>{});
 	    assert(succ <= tr.size());

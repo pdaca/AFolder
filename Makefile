@@ -1,7 +1,7 @@
 CXX=		g++
 DEVFLAGS=	-g -DINFO #-DDEBUG
 PRODFLAGS=	-DNDEBUG
-CXXFLAGS=	-O2 -Wall -Wextra -Wshadow -ansi -pedantic -Wno-unused-parameter -std=c++11 -DTIXML_USE_STL $(PRODFLAGS) # $(DEVFLAGS) #-Weffc++
+CXXFLAGS=	-O2 -Wall -Wextra -Wshadow -ansi -pedantic -Wno-unused-parameter -std=c++11 -DTIXML_USE_STL  $(DEVFLAGS) #-Weffc++
 LDFLAGS= 	-Wall
 LDLIBS= 	-lz3 
 TARGET=		afolder

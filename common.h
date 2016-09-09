@@ -19,6 +19,7 @@ typedef std::pair<state_t, std::vector<counter_t>> cm_config;
 
 namespace fold {
 
+  std::ostream& operator<<(std::ostream& os, const std::vector<bool>& v);
   std::ostream& operator<<(std::ostream& os, const std::vector<int>& v);
   std::ostream& operator<<(std::ostream& os, const std::set<int>& v);
   std::ostream& operator<<(std::ostream& os, const std::set<uint>& v);

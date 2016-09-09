@@ -6,6 +6,20 @@
 
 namespace fold {
 
+  std::ostream& operator<<(std::ostream& os, const std::vector<bool>& v){
+    if (v.size() == 0){
+      return os << "[]";
+    }
+    
+    os << "[";
+    for (uint i=0; i<v.size()-1; i++)
+      os << v[i] << ",";
+
+    os << v[v.size() -1] << "]";
+    return os;
+  }
+
+
   std::ostream& operator<<(std::ostream& os, const std::vector<int>& v){
     if (v.size() == 0){
       return os << "[]";

@@ -58,7 +58,7 @@ namespace fold {
     // postfix is appended to every variable name.
     void addEmptinessFormula(z3::solver& s, uint r, std::string postfix);
 
-    /* // Prints to the stream a model for an emptiness formula. */
+    // Prints to the stream a model for an emptiness formula. 
     void printModel(const z3::model& model, std::ostream& os);
 
     // Generate word in the language of the CM from a model.

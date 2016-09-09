@@ -104,11 +104,13 @@ namespace fold {
   CmAction(const uint letter_id,
 	   const std::set<SCounterConstraint>& ccs,
 	   state_t succ,
-	   const std::vector<int>& addition)
+	   const std::vector<int>& addition,
+	   const std::vector<bool>& add_element)
     : letter_id_ {letter_id}
     , ccs_ {ccs}
     , succ_{succ}
     , addition_{addition}
+    , add_element_{add_element}
     {}
     
     ~CmAction()					{}
@@ -118,12 +120,14 @@ namespace fold {
     { return ccs_; }
     state_t succ() const 			{ return succ_; }
     const std::vector<int>& addition() const 	{ return addition_; }
+    const std::vector<bool>& add_element() const 	{ return add_element_; }
   private:
     uint letter_id_;		// position in the alphabet
     std::set<SCounterConstraint> ccs_;
     state_t succ_;
-    std::vector<int> addition_;
-
+    std::vector<int> addition_;	// constants to add
+    std::vector<bool> add_element_; // add array element value
+    
     friend std::ostream& operator<<(std::ostream& os,
 				    const CmAction& cma);
   };

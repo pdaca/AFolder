@@ -28,6 +28,7 @@ namespace fold {
   const std::string COUNTER_ID_ATT = "counter";
   const std::string MODE_ID_ATT = "mode";
   const std::string NUMERIC_CONS_ATT = "numeric";
+  const std::string ELEMENT_ATT = "element";
   const std::string SYMBOLIC_CONS_ATT = "symbolic";
 
   // Describes fold application in a logic formula.
@@ -62,7 +63,7 @@ namespace fold {
 
   /* Parse the XML file to get description of fold functions. Then
      translate the functions into counter machines. */
-  void getCms(const char* file, std::map<std::string, SCM<SymbolFrm>>& cm_map);
+  void getCms(const char* file, std::map<std::string, SCM<SymbolFrm>>& cm_map, bool allowsum);
 
 
 }

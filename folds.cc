@@ -125,7 +125,7 @@ namespace fold {
   }
 
 
-  SymbolConstraint getSymbolConstraint(TiXmlNode *node){
+  SymbolConstraint getSymbolConstraint(TiXmlNode *node, bool allowsum){
     TiXmlAttribute* att = node->ToElement()->FirstAttribute();
 
     bool numeric_given = false;
@@ -163,6 +163,11 @@ namespace fold {
     assert(relation_given && (numeric_given || symbolic_given)
 	   && (!numeric_given || !symbolic_given));
 
+    if (symbolic_given && allowsum){
+      cerr << "Error: cannot use " << SYMBOLIC_CONS_ATT << " with the -sum option." << endl;
+      assert(false);
+    }
+    
     assert(!symbolic_given || (sym_id >= 1));
     Constant cons {symbolic_given, num, (uint) sym_id-1};
     
@@ -171,12 +176,13 @@ namespace fold {
   }
 
 
-  pair<uint, int> getUpdatePair(TiXmlNode *node){
+  pair<uint, pair<int, bool> > getUpdatePair(TiXmlNode *node, bool allowsum){
         TiXmlAttribute* att = node->ToElement()->FirstAttribute();
 
     bool numeric_given = false;
     bool ctrid_given = false;
     int num;
+    int add_element = false;
     int ctr_id;
 
     while (att) {
@@ -188,11 +194,18 @@ namespace fold {
 	ctrid_given = true;
       }
       else if (NUMERIC_CONS_ATT.compare(att->Name()) == 0){
-	if (att->QueryIntValue(&num) != TIXML_SUCCESS)
+	int tmp;
+	if (att->QueryIntValue(&tmp) != TIXML_SUCCESS)
 	  assert(false);
 
-	numeric_given = true;
+	add_element = (tmp != 0);
       }
+      else if (ELEMENT_ATT.compare(att->Name()) == 0){
+	if (att->QueryIntValue(&num) != TIXML_SUCCESS)
+	  assert(false);
+	
+	numeric_given = true;
+      }	       
       else {
 	assert(false);
       }
@@ -200,10 +213,22 @@ namespace fold {
       att = att->Next();
     }
 
-    assert(ctrid_given && numeric_given);
+    assert(ctrid_given);
+    if((!numeric_given && !add_element) || (numeric_given && add_element)){
+      cerr << "Error: need to use exactly one of the following attributes: "
+	   << NUMERIC_CONS_ATT << ", " << ELEMENT_ATT << endl;
+      assert(false);
+    }
+
+    if (add_element && !allowsum){
+      cerr << "Error: cannot use " << ELEMENT_ATT << " without the -sum option." << endl;
+      assert(false);
+    }
+	
     assert(ctr_id >= 1);
 
-    pair<uint, int> pr= std::make_pair((uint) ctr_id-1, num);
+    pair<int, bool> chg = std::make_pair(num, add_element);
+    pair<uint, pair<int, bool> > pr = std::make_pair((uint) ctr_id-1, chg);
     return pr;
   }
 
@@ -212,10 +237,12 @@ namespace fold {
 		   uint counters_no,
 		   int mode,
 		   deque<CmAction>& actions,
-		   map<SymbolFrm, uint>& letter_map){
+		   map<SymbolFrm, uint>& letter_map,
+		   bool allowsum){
     set<SCounterConstraint> ccs;
     set<SymbolConstraint> scs;
     vector<int> addition (counters_no);
+    vector<bool> add_elements (counters_no);
     int succ = mode;
 
     for (TiXmlNode* child = node->FirstChild(); child != NULL; child = child->NextSibling()){
@@ -224,12 +251,14 @@ namespace fold {
 	ccs.insert(cc);
       }
       else if (SGUARD_TAG.compare(child->Value()) == 0){
-	SymbolConstraint sc = getSymbolConstraint(child);
+	SymbolConstraint sc = getSymbolConstraint(child, allowsum);
 	scs.insert(sc);
       }
       else if (CTR_UPDATE_TAG.compare(child->Value()) == 0){
-	pair<uint, int> up = getUpdatePair(child);
-	addition[up.first] = up.second;
+	pair<uint, pair<int, bool> > up = getUpdatePair(child, allowsum);
+	pair<int, bool> chg = up.second;	
+	addition[up.first] = chg.first;
+	add_elements[up.first] = chg.second;
       }
       else if (MODE_UPDATE_TAG.compare(child->Value()) == 0){
 	TiXmlAttribute* att = child->ToElement()->FirstAttribute();
@@ -264,13 +293,13 @@ namespace fold {
       letter_id = elem->second;
     }
 
-    CmAction cma {letter_id, ccs, (uint) succ-1, addition};
+    CmAction cma {letter_id, ccs, (uint) succ-1, addition, add_elements};
     actions.push_back(cma);
   }
 
 
   /* Extract the counter machine for the XML element */
-  void addCm(TiXmlElement *elem, map<string, SCM<SymbolFrm>>& cm_map) {
+  void addCm(TiXmlElement *elem, map<string, SCM<SymbolFrm>>& cm_map, bool allowsum) {
     bool name_given = false;
     bool counters_given = false;
     string name;
@@ -331,7 +360,7 @@ namespace fold {
 	}
 	assert(mode >= 1 && modes <= modes);
 
-	addCmAction(child, counters_no, mode, tr[mode-1], letter_map);
+	addCmAction(child, counters_no, mode, tr[mode-1], letter_map, allowsum);
       }
     }
 
@@ -354,7 +383,7 @@ namespace fold {
   }
 
 
-  void getCms(const char* file, std::map<string, SCM<SymbolFrm>>& cm_map){
+  void getCms(const char* file, std::map<string, SCM<SymbolFrm>>& cm_map, bool allowsum){
     TiXmlDocument doc(file);
     bool ok = doc.LoadFile();
     if (!ok){
@@ -365,7 +394,7 @@ namespace fold {
 
     for (TiXmlNode* child = doc.FirstChild(); child != NULL; child = child->NextSibling()){
       if (FUNCTION_TAG.compare(child->Value()) == 0){
-	addCm(child->ToElement(), cm_map);
+	addCm(child->ToElement(), cm_map, allowsum);
       }
     }
     
