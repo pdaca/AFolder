@@ -12,10 +12,11 @@ namespace fold {
     }
     
     os << "[";
-    for (uint i=0; i<v.size()-1; i++)
-      os << v[i] << ",";
+    for (uint i=0; i<v.size(); i++)
+      if (v[i])
+	os << i << ",";
 
-    os << v[v.size() -1] << "]";
+    os << "]";
     return os;
   }
 

@@ -181,7 +181,7 @@ namespace fold {
 
     bool numeric_given = false;
     bool ctrid_given = false;
-    int num;
+    int num = 0;
     int add_element = false;
     int ctr_id;
 
@@ -193,18 +193,18 @@ namespace fold {
 
 	ctrid_given = true;
       }
-      else if (NUMERIC_CONS_ATT.compare(att->Name()) == 0){
+      else if (NUMERIC_CONS_ATT.compare(att->Name()) == 0){       
+	if (att->QueryIntValue(&num) != TIXML_SUCCESS)
+	  assert(false);
+	
+	numeric_given = true;
+      }
+      else if (ELEMENT_ATT.compare(att->Name()) == 0){
 	int tmp;
 	if (att->QueryIntValue(&tmp) != TIXML_SUCCESS)
 	  assert(false);
 
 	add_element = (tmp != 0);
-      }
-      else if (ELEMENT_ATT.compare(att->Name()) == 0){
-	if (att->QueryIntValue(&num) != TIXML_SUCCESS)
-	  assert(false);
-	
-	numeric_given = true;
       }	       
       else {
 	assert(false);
