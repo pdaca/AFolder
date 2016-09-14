@@ -319,44 +319,43 @@ namespace fold {
     // incr.at(i).at(j) is the list of incrementing updates for counter i in mode j
     vector<vector<deque<expr>>> incr (k, vector<deque<expr>>(nmax)); 
     vector<vector<deque<expr>>> decr (k, vector<deque<expr>>(nmax));
-
+    
     for (uint p=0; p<states_no; p++){
       const deque<NfaAction>& trans = tr.at(p);
-
+      
       for (auto it=trans.begin(); it!=trans.end(); it++){
 	const NfaAction& na = *it;
-
+	
 	pair<state_t, NfaAction> ppr {p, na};
-      auto elem = action_map.find(ppr);
-      assert(elem != action_map.end());
-
-      const pair<state_t, CmAction>& spr = elem->second;
-      const CmAction& cam = spr.second;
-      const vector<int>& add = cam.addition();
+	auto elem = action_map.find(ppr);
+	assert(elem != action_map.end());
+	
+	const pair<state_t, CmAction>& spr = elem->second;
+	const CmAction& cam = spr.second;
+	const vector<int>& add = cam.addition();
         
-      for (uint i=0; i<k; i++){
-	int u = add.at(i);
-
-	if (u == 0)
-	  continue;
-	
-	auto elem_f = flow_map.find(ppr);
-	assert(elem_f != flow_map.end());
-	const expr& f_var = elem_f->second;
-	uint j = toModeRev(p, nmax);
-	
-	if (u>0){
-	  incr.at(i)
-	    .at(j)
-	    .push_back(f_var);
-	}
-	else if (u<0){
+	for (uint i=0; i<k; i++){
+	  int u = add.at(i);
+	  
+	  if (u == 0)
+	    continue;
+	  
+	  auto elem_f = flow_map.find(ppr);
+	  assert(elem_f != flow_map.end());
+	  const expr& f_var = elem_f->second;
+	  uint j = toModeRev(p, nmax);
+	  
+	  if (u>0){
+	    incr.at(i)
+	      .at(j)
+	      .push_back(f_var);
+	  }
+	  else if (u<0){
 	  decr.at(i)
 	    .at(j)
 	    .push_back(f_var);
-	}
-      }      
-      
+	  }
+	}      	
       }
     }
   
@@ -1003,8 +1002,18 @@ namespace fold {
 
     template <>
     vector<int> SCMEmptinessCheck<SymbolFrm>::ewordFromModel(const model& model) {
-      const vector<CmAction>& word = wordFromModel(model);
+      const vector<CmAction>& word = wordFromModel(model);      
       vector<int> eword (word.size());
+
+#ifdef INFO
+      vector<SymbolFrm> alphabet = cm_.alphabet();
+      cout << "model as string:" << endl;
+      for (auto it=word.begin(); it!=word.end(); it++){
+	cout << alphabet[it->letter_id()] << ", ";
+      }
+      cout << endl << endl;
+#endif
+
 
       for (uint i=0; i<word.size(); i++){
 	const CmAction& cam = word.at(i);
