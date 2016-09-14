@@ -17,6 +17,7 @@ using std::deque;
 using std::map;
 using std::to_string;
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::flush;
 using std::move;
@@ -182,6 +183,114 @@ namespace fold {
   }
 
 
+  // Add the sum of elements
+  void addElementSum(solver& s,
+		     expr& sum_var,
+		     const expr& f_var,
+		     const SymbolFrm& sf){
+
+    for (auto sc=sf.begin(); sc!=sf.end(); sc++){
+      const Constant& cons = sc->cons();
+
+      if (cons.is_symbolic()){
+	cerr << "Error: it is not allow to use symbolic constansts when adding element value to a counter" << endl;
+	assert(false);
+      }
+      
+      int num = cons.num();
+      
+      switch (sc->op()){
+      case EQ:
+	s.add(sum_var = (f_var * num));
+	break;
+	
+      case GT:
+	s.add(sum_var > (f_var * num));
+	break;
+	  
+      case LT:
+	s.add(sum_var < (f_var * num));
+	break;
+	    
+      case GEQ:
+	s.add(sum_var >= (f_var * num));
+	break;
+	    
+      case LEQ:
+	s.add(sum_var <= (f_var * num));
+	break;
+	
+      case NEQ:
+	s.add(sum_var != (f_var * num));
+	break;
+
+      default:
+	assert(false);
+      }      
+    }
+  }
+
+
+  // Add the sum of updates to counters by the given action.
+  template <typename T>
+  static void addSumFromAction(solver& s,
+			       const SCM<T>& cm,
+			       const map<pair<state_t, NfaAction>, expr>& flow_map,
+			       map<pair<uint, pair<state_t, NfaAction>>, expr>& sum_map,
+			       const map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map,
+			       vector<vector<expr>>& sum_same,
+			       vector<vector<expr>>& sum_next,
+			       const NfaAction& na,
+			       state_t p_mode,
+			       uint p,
+			       uint nmax,
+			       string postfix){
+        context& c = s.ctx();
+        uint k  = cm.counters_no();
+
+	uint q = na.succ();
+	state_t q_mode = toModeRev(q, nmax);
+	assert(p_mode == q_mode || (p_mode + 1) == q_mode);
+
+	pair<state_t, NfaAction> ppr {p, na};
+	auto elem = action_map.find(ppr);
+	assert(elem != action_map.end());
+	
+	const pair<state_t, CmAction>& spr = elem->second;
+	const CmAction& cam = spr.second;
+
+	auto elem_f = flow_map.find(ppr);
+	const expr& f_var = elem_f -> second;
+	
+    	const vector<int>& add = cam.addition();
+	const vector<bool>& add_elem = cam.add_element();
+
+	for (uint j=0; j<k; j++){
+	  expr& sum = p_mode == q_mode ? sum_same.at(j).at(p_mode) : sum_next.at(j).at(p_mode);
+	  int u = add.at(j);
+	  
+	  if (add_elem.at(j)){
+	      // add the element value
+	      uint letter_id = cam.letter_id();
+	      const vector<T>& alphabet = cm.alphabet();
+	      const T& letter = alphabet.at(letter_id);
+
+	      pair<uint, pair<state_t, NfaAction> > cppr {j, ppr};
+	      string sum_name = "sum_"+to_string(p)
+		+"_"+to_string(na.letter_id())+"_"+to_string(q)+"_"+to_string(j)+postfix;
+	      expr sum_var = c.int_const(sum_name.c_str());
+	      sum_map.insert(make_pair(cppr, sum_var));
+		
+	      addElementSum(s, sum_var, f_var, letter);
+	      sum = sum + sum_var;
+	    } else if (u != 0) {
+	      // add a constant
+	      sum = sum + (u * f_var);
+	    }
+	}
+  }
+
+
   template <typename T>
   static void addRespectFormula(solver& s, uint nmax,
 				const SCM<T>& cm,
@@ -196,8 +305,10 @@ namespace fold {
   			        const vector<expr>& aparikh,
   				const vector<expr>& scons,
 				const map<pair<state_t, NfaAction>, expr>& flow_map,
+				map<pair<uint, pair<state_t, NfaAction>>, expr>& sum_map,
 				const map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map,
-				const vector<bool> cmp_symid_simple){
+				const vector<bool> cmp_symid_simple,
+				string postfix){
 
     context& c = s.ctx();
     uint states_no = nfa.states_no();
@@ -293,32 +404,21 @@ namespace fold {
 
       for (auto it=trans.begin(); it!=trans.end(); it++){
 	const NfaAction& na = *it;
-	uint q = na.succ();
-	state_t q_mode = toModeRev(q, nmax);
 
-	pair<state_t, NfaAction> ppr {p, na};
-	auto elem = action_map.find(ppr);
-	assert(elem != action_map.end());
+	// pair<state_t, NfaAction> ppr {p, na};
+	// auto elem = action_map.find(ppr);
+	// assert(elem != action_map.end());
 	
-	const pair<state_t, CmAction>& spr = elem->second;
-	const CmAction& cam = spr.second;
-	const vector<int>& add = cam.addition();
+	// const pair<state_t, CmAction>& spr = elem->second;
+	// const CmAction& cam = spr.second;
 
-	auto elem_f = flow_map.find(ppr);
-	const expr& f_var = elem_f -> second;
+	// auto elem_f = flow_map.find(ppr);
+	// const expr& f_var = elem_f -> second;
 
 	// does the transiton add the same mode, or to the next one?
-	assert(p_mode == q_mode || (p_mode + 1) == q_mode);
 
-
-	for (uint j=0; j<k; j++){
-	  int u = add.at(j);
-
-	  if (u != 0){
-	    expr& sum = p_mode == q_mode ? sum_same.at(j).at(p_mode) : sum_next.at(j).at(p_mode);
-	    sum = sum + (u * f_var);
-	  }
-	}
+	//expr& sum = p_mode == q_mode ? sum_same.at(j).at(p_mode) : sum_next.at(j).at(p_mode);
+	addSumFromAction(s,cm,flow_map,sum_map,action_map,sum_same,sum_next,na,p_mode,p,nmax,postfix);	
       }
     }
 
@@ -699,7 +799,8 @@ namespace fold {
     addInitFormula(s, k_, cmp_const, cmp_symid, reg_, rev_, arr_, startc_, scons_, cmp_symid_simple);
     addGoodSeqFormula(s, k_, nmax_, r, cmp_const, cmp_symid, reg_, rev_, arr_);
     addRespectFormula(s, nmax_, cm_, nfa_, cmp_const, cmp_symid, reg_, rev_, arr_,
-    		      startc_, endc_, aparikh_, scons_, flow_map_, action_map_,cmp_symid_simple);
+    		      startc_, endc_, aparikh_, scons_, flow_map_, sum_map_, action_map_,
+		      cmp_symid_simple, postfix);
     addSymbolFormula(s, cm_, postfix, scons_, svars_, flow_map_, action_map_);
   }
 

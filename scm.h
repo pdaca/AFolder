@@ -96,7 +96,6 @@ namespace fold {
 
   std::ostream& operator<<(std::ostream& os,
 			   const SymbolFrm& sc);
-
   
   // A transition in a CM.
   class CmAction {
