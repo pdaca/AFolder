@@ -45,7 +45,7 @@ namespace fold {
 	if (w > 0){
 
 	  if (l >= 0){
-	    os << "s=" << p << ", w=" << w << ", l=" << alphabet[l]
+	    os << "s=" << p << ", w=" << w << ", l=" << l
 	       << ", s'=" << q << endl;
 	  } else {
 	    os << "s=" << p << ", w=" << w << ", l= " 
@@ -60,6 +60,7 @@ namespace fold {
 
   template std::ostream& operator<<(std::ostream& os, const WeightedLabeledGraph<SymbolFrm>& gr);
   template std::ostream& operator<<(std::ostream& os, const WeightedLabeledGraph<CmAction>& gr);
+  template std::ostream& operator<<(std::ostream& os, const WeightedLabeledGraph<uint>& gr);
 
 
     template<typename T>
@@ -132,7 +133,8 @@ namespace fold {
     return path;
   }
 
-  template     deque<uint> getEulerianPath(WeightedLabeledGraph<CmAction>& graph, uint start);
+  template deque<uint> getEulerianPath(WeightedLabeledGraph<CmAction>& graph, uint start);
+  template deque<uint> getEulerianPath(WeightedLabeledGraph<uint>& graph, uint start);
 
 
 }

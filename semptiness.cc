@@ -912,8 +912,7 @@ namespace fold {
   // Construct a weighted graph from the NFA and the model.  The
   // graph consists of the NFA states, and the weighted of edges is
   // taken from the model.
-
-  static WeightedLabeledGraph<CmAction> constructGraph(const model& model,
+  static WeightedLabeledGraph<uint> constructGraph(const model& model,
 						   const NFA<CmAction>& nfa,
 						   uint nmax,
 						   const map<pair<state_t, NfaAction>, expr>& flow_map,
@@ -926,13 +925,15 @@ namespace fold {
     map<pair<uint,uint>, uint> weight;
     map<pair<uint,uint>, uint> labels;
 
-    const vector<CmAction>& alphabet = nfa.alphabet();
+    // doesnt matter
+    vector<uint> alphabet{};
     
     const vector<deque<NfaAction>>& tr = nfa.tr();
     
     for (uint p=0; p<nfa.states_no(); p++){
       const deque<NfaAction>& trans = tr.at(p);
 
+      uint i=0;
       for (auto it=trans.begin(); it!=trans.end(); it++){
 	const NfaAction& na = *it;
 
@@ -951,29 +952,30 @@ namespace fold {
 
 	weight[make_pair(p,w)] = flow;
 	weight[make_pair(w,q)] = flow;
-
-	labels[make_pair(p,w)] = na.letter_id();
+	// labels saves the number of the NFA transition from state p
+	labels[make_pair(p,w)] = i;
+	i++;
       }
     }
     
-    WeightedLabeledGraph<CmAction> graph(states_no, weight, labels, alphabet);
+    WeightedLabeledGraph<uint> graph(states_no, weight, labels, alphabet);
 
     return move(graph);
   }
 
 
 
+  vector<pair<state_t,NfaAction>> nfaWordFromModel(const model& model,
+						   const NFA<CmAction>& nfa,
+						   uint nmax,
+						   const map<pair<state_t, NfaAction>, expr>& flow_map,
+						   const map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map) {
+    WeightedLabeledGraph<uint> graph = constructGraph(model, nfa, nmax,
+						   flow_map, action_map);
 
-
-
-  template <typename T>
-  vector<CmAction> SCMEmptinessCheck<T>::wordFromModel(const model& model) {
-    WeightedLabeledGraph<CmAction> graph = constructGraph(model, nfa_, nmax_,
-						   flow_map_, action_map_);
-    
-    uint start = nfa_.init_state();
+    const vector<deque<NfaAction>>& tr = nfa.tr();
+    uint start = nfa.init_state();
     const map<pair<uint, uint>, uint>& label = graph.label_;
-    const vector<CmAction>&  alphabet = graph.alphabet_;
 
 #ifdef DEBUG
     cout << "Graph" << endl;
@@ -981,20 +983,46 @@ namespace fold {
 #endif
     deque<uint> epath = getEulerianPath(graph, start);
 
-    vector<CmAction> word;
+#ifdef DEBUG    
+    cout << "Eulerian path" << endl;
+    cout << epath << endl;
+#endif
+
+    int states_no = nfa.states_no();
+    vector<pair<state_t,NfaAction> > word;    
+
     int p = -1;
     for (auto it=epath.begin(); it!=epath.end(); it++){
       uint q = *it;
       
-      if (p!=-1){
-	pair<uint, uint> pr {p,q};
+      if ((p!=-1) && (p<states_no)){
+	// find the nfa transition
+		pair<uint, uint> pr {p,q};
 	auto elem = label.find(pr);
-	if (elem != label.end()){
-	    word.push_back(alphabet[elem->second]);  
-	}
+	
+	const NfaAction& na = tr.at(p).at(elem->second);
+	pair<state_t, NfaAction> pair{p,na};
+	word.push_back(pair);
       }
       p = q;
     }    
+    return word;
+  }
+  
+
+  template <typename T>
+  vector<CmAction> SCMEmptinessCheck<T>::wordFromModel(const model& model) {
+    vector<pair<state_t,NfaAction>> nfa_word = nfaWordFromModel(model, nfa_, nmax_,
+						   flow_map_, action_map_);
+    vector<CmAction> word{};
+    
+    for (auto it=nfa_word.begin(); it!=nfa_word.end(); it++){
+      const pair<state_t,NfaAction>& pr = *it;
+      auto elem = action_map_.find(pr);
+      const pair<state_t,CmAction>& pr2 = elem->second;
+      word.push_back(pr2.second);
+
+    }
     return word;
   }
 
