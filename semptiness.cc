@@ -603,7 +603,6 @@ namespace fold {
 					 const vector<expr>& scons,
 					 const expr& b_svar,
 					 const expr& svar,
-					 uint uid,
 					 const string& postfix){
 
     context& c = s.ctx();
@@ -668,7 +667,7 @@ namespace fold {
       const expr b_svar = c.bool_const(name.c_str());
       const expr& s_var = svars.at(i);
       bool_svars.push_back(b_svar);
-      addSymbolFormulaConstraint(s, sf, scons, b_svar, s_var, i, postfix);
+      addSymbolFormulaConstraint(s, sf, scons, b_svar, s_var,  postfix);
     }
     
     for (auto it=flow_map.begin(); it!=flow_map.end(); it++){
@@ -809,8 +808,8 @@ namespace fold {
 
   template <typename T>
     NFA<CmAction> SCMEmptinessCheck<T>::toNFA(const SCM<T>& cm,
-					  uint nmax,
-					  map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map){
+					      uint nmax,
+					      map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map){
 
     
     uint states_no_cm = cm.states_no();
@@ -942,12 +941,9 @@ namespace fold {
 	pair<state_t, NfaAction> ppr {p, na};
 	auto elem_f = flow_map.find(ppr);
 	const expr& flow_var = elem_f->second;
-	expr eval = model.eval(flow_var); 
-	uint flow = 0;
-	Z3_bool ok = Z3_get_numeral_uint(eval.ctx(), eval, &flow);
-	assert(ok);
+	uint flow = getZ3Value(model, flow_var);
 
-	// adds intermiade state;
+	// adds intermediate state;
 	uint w = next_free++;
 
 	weight[make_pair(p,w)] = flow;
@@ -985,7 +981,7 @@ namespace fold {
 
 #ifdef DEBUG    
     cout << "Eulerian path" << endl;
-    cout << epath << endl;
+    cout << epath << endl << endl;
 #endif
 
     int states_no = nfa.states_no();
@@ -1013,7 +1009,7 @@ namespace fold {
   template <typename T>
   vector<CmAction> SCMEmptinessCheck<T>::wordFromModel(const model& model) {
     vector<pair<state_t,NfaAction>> nfa_word = nfaWordFromModel(model, nfa_, nmax_,
-						   flow_map_, action_map_);
+								flow_map_, action_map_);
     vector<CmAction> word{};
     
     for (auto it=nfa_word.begin(); it!=nfa_word.end(); it++){
@@ -1028,33 +1024,146 @@ namespace fold {
 
 
 
-    template <>
-    vector<int> SCMEmptinessCheck<SymbolFrm>::ewordFromModel(const model& model) {
-      const vector<CmAction>& word = wordFromModel(model);      
-      vector<int> eword (word.size());
+  template <>
+  vector<int> SCMEmptinessCheck<SymbolFrm>::ewordFromModel(const model& m1) {
+    vector<pair<state_t,NfaAction>> nfa_word = nfaWordFromModel(m1, nfa_, nmax_,
+								flow_map_, action_map_);
 
-#ifdef INFO
-      vector<SymbolFrm> alphabet = cm_.alphabet();
-      cout << "model as string:" << endl;
-      for (auto it=word.begin(); it!=word.end(); it++){
-	cout << alphabet[it->letter_id()] << ", ";
-      }
-      cout << endl << endl;
+    uint k = cm_.counters_no();
+    const vector<SymbolFrm>& alphabet = cm_.alphabet();
+
+#ifdef DEBUG
+    cout << "NFA word" << endl;
+    for (auto it=nfa_word.begin(); it!=nfa_word.end(); it++){
+      state_t p = it->first;
+      cout << it->second << ", mode=" <<  toModeRev(p,nmax_) << endl;
+    }
+    cout << endl;
 #endif
 
+    // build a ILP that gives values for actions
+    context c2;
+    solver s2(c2);
+    expr tt =  c2.bool_val(true);
+    expr zero = c2.int_val(0);
 
-      for (uint i=0; i<word.size(); i++){
-	const CmAction& cam = word.at(i);
-	const expr& s_var = svars_[cam.letter_id()];
-	const expr& eval = model.eval(s_var);
-	int val = 0;
-	Z3_bool ok = Z3_get_numeral_int(eval.ctx(), eval, &val);
-	assert(ok);
-	eword.at(i) = val;
+
+    vector<expr> symbol_vars(nfa_word.size(), tt);	// symbol value
+    for (uint i=0; i<nfa_word.size(); i++){
+      string name = "a_" + to_string(i);
+      symbol_vars.at(i) = c2.int_const(name.c_str());
+    }
+
+    vector<expr> scons2(scons_.size(),zero);			// get copy of scons
+    for (uint i=0; i<scons_.size(); i++){
+      uint val =  getZ3Value(m1, scons_.at(i));      	
+      scons2.at(i) = c2.int_val(val);
+    }
+
+    vector<expr> cnt_vars(k, zero);			// current counter values
+    
+    state_t prev_mode = 0;
+    if (nfa_word.size() > 0){
+      state_t p = nfa_word[0].first;
+      prev_mode = toModeRev(p,nmax_);
+    }
+    
+    
+    for (uint i=0; i<nfa_word.size(); i++){
+      const pair<state_t,NfaAction>& pr= nfa_word[i];
+      state_t p = pr.first;
+      const NfaAction& na = pr.second;
+      state_t q = na.succ();
+      state_t mode = toModeRev(q,nmax_);
+      
+      pair<state_t, NfaAction> pr2 {p, na};
+      auto elem = action_map_.find(pr2);
+      const CmAction& cma = elem->second.second;
+      const vector<int>& addition = cma.addition();
+      const vector<bool>& add_element = cma.add_element();
+      const SymbolFrm& sf = alphabet[cma.letter_id()];      
+
+      addSymbolFormulaConstraint(s2, sf, scons2, tt, symbol_vars[i], "");
+      bool new_mode = (mode != prev_mode);
+      
+      cout << cma << endl;
+      
+      if (new_mode){
+	// the mode changes, so add constrains (counter_value = "value at the end of the previous mode")
+	// set counter values to the value at the end of the previous mode
+	for (uint j=0; j<k; j++){
+	  const expr& end_var = endc_.at(j).at(prev_mode);
+	  uint endval =  getZ3Value(m1, end_var);      	
+
+	  expr& cnt_var = cnt_vars.at(j);
+	  s2.add(cnt_var == ((int) endval));
+	  cout << "cnt_var(" << j << ")" << cnt_var << endl;
+	  cout << "endval(ctr=" << j << ", mode=" << prev_mode << ")" << endval << endl;
+	  cnt_vars.at(j) = c2.int_val(endval);
+	}
       }
 
-      return eword;
+      // update counter values by the action
+      for (uint j=0; j<k; j++){
+	expr& cnt_var = cnt_vars.at(j);
+	if (add_element.at(j)){
+	  cnt_var = cnt_var + symbol_vars.at(i);
+	}
+	else if (addition.at(j) != 0){
+	  cnt_var = cnt_var + addition.at(j);
+	}
+      }
+
+      if (new_mode){
+	// add contraint (counter_value = "value at the begining of the new mode"
+	// set counter value to the value at the begginng of the new mode
+	for (uint j=0; j<k; j++){
+	  const expr& start_var = startc_.at(j).at(mode);
+	  uint startval = getZ3Value(m1, start_var);
+	  cout << "startval(ctr=" << j << ", mode=" << mode << ")" << startval << endl;
+	  expr& cnt_var = cnt_vars.at(j);
+	  cout << "cnt_var(" << j << ")" << cnt_var << endl;
+	  	  s2.add(cnt_var == ((int) startval));
+
+	  cnt_vars.at(j) = c2.int_val(startval);
+	}
+      }
+      prev_mode = mode;
     }
+
+    // add final values
+    for (uint j=0; j<k; j++){
+      const expr& end_var = endc_.at(j).at(prev_mode);
+      uint endval =  getZ3Value(m1, end_var);      	
+      
+      expr& cnt_var = cnt_vars.at(j);
+      s2.add(cnt_var == ((int) endval));
+      cout << "cnt_var(" << j << ")" << cnt_var << endl;
+      cout << "endval(ctr=" << j << ", mode=" << prev_mode << ")" << endval << endl;
+    }
+
+
+#ifdef DEBUG
+    cout << "Model formula" << endl;
+    cout << s2 << endl;
+#endif
+
+    
+    bool sat = s2.check();
+    assert(sat);
+    model m2 = s2.get_model();
+
+    // get concrete values
+    vector<int> eword (nfa_word.size());
+    
+    for (uint i=0; i<nfa_word.size(); i++){
+      const expr& var = symbol_vars.at(i);
+      uint val = getZ3Value(m2, var);
+      eword[i] = val;
+    }
+            
+    return eword;
+  }
   
 
   template <typename T>

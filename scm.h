@@ -12,6 +12,8 @@
 
 namespace fold {
 
+  
+
   // Variant class that describes either a number, or index of a symbolic value;
   class Constant {
   public:

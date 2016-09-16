@@ -12,7 +12,6 @@
 #include "automata.h"
 #include "cm.h"
 #include "scm.h"
-#include "z3++.h"
 
 namespace fold {
 

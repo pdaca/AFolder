@@ -9,6 +9,7 @@
 #include <vector>
 #include <deque>
 #include <set>
+#include "z3++.h"
 
 typedef unsigned int uint;
 typedef unsigned long long ullong;
@@ -29,6 +30,10 @@ namespace fold {
   std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v);
   std::ostream& operator<<(std::ostream& os, const cm_config& cnf);
   std::ostream& operator<<(std::ostream& os, const std::deque<cm_config>& d);
+
+  // get variable valuation from a model
+  uint  getZ3Value(const z3::model& m, const z3::expr& var);
+
 
 }
 

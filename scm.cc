@@ -5,7 +5,7 @@
 #include <map>
 #include <cassert>
 #include "scm.h"
-#include "z3++.h"
+
 
 using std::endl;
 using std::string;
@@ -390,6 +390,7 @@ namespace fold {
 	const set<SCounterConstraint>& ccs1 = cam1.counter_constraints();
 	uint succ1 = cam1.succ();
 	const vector<int>& add1 = cam1.addition();
+	const vector<bool>& adde1 = cam1.add_element();
 	
 	for (auto it2=acts2.begin(); it2!=acts2.end(); it2++){
 	  const CmAction& cam2 = *it2;
@@ -440,6 +441,7 @@ namespace fold {
 	  const set<SCounterConstraint>& ccs2 = cam2.counter_constraints();
 	  uint succ2 = cam2.succ();
 	  const vector<int>& add2 = cam2.addition();
+	  const vector<bool>& adde2 = cam2.add_element();
 
 	  // TODO replace vector with deques
 	  set<SCounterConstraint> ccs;
@@ -463,6 +465,14 @@ namespace fold {
 	  for (uint i=0; i<counters_no2; i++)
 	    add[i+counters_no1] = add2[i];
 
+	  vector<bool> adde(counters_no);
+	  for (uint i=0; i<counters_no1; i++)
+	    adde[i] = adde1[i];
+	  
+	  for (uint i=0; i<counters_no2; i++)
+	    adde[i+counters_no1] = adde2[i];
+
+
 	  // find successor id
 	  ullong succ_pair = succ1 * states_no2 + succ2;
 	  state_t succ;
@@ -475,10 +485,8 @@ namespace fold {
 	    succ = elem->second;
 	  }
 
-	  // TODO
-	  vector<bool> add_element(counters_no);
 	  
-	  CmAction cam {letter_id, ccs, succ, add, add_element};
+	  CmAction cam {letter_id, ccs, succ, add, adde};
 	  if (succ >= tr.size()){
 	    tr.push_back(deque<CmAction>{});
 	    assert(succ <= tr.size());

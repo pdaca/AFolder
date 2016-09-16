@@ -8,7 +8,6 @@
 #include <vector>
 #include <map>
 #include "scm.h"
-#include "z3++.h"
 
 
 namespace fold {

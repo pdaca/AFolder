@@ -14,7 +14,6 @@
 #include "semptiness.h"
 #include "scm.h"
 #include "folds.h"
-#include "z3++.h"
 
 
 using std::vector;

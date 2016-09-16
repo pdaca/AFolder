@@ -624,10 +624,7 @@ namespace fold {
 	  if (elem == flow_map.end())
 	    assert(false);
 	  const expr& flow_var = elem->second;
-	  expr eval = model.eval(flow_var);
-	  uint flow = 0;
-	  Z3_bool ok = Z3_get_numeral_uint(eval.ctx(), eval, &flow);
-	  assert(ok);
+	  uint flow =  getZ3Value(model, flow_var);
 	  weight[p][q] = flow;
 
 	  auto pelem = symbol_info.find(p);

@@ -4,6 +4,8 @@
 */
 #include "common.h"
 
+using namespace z3;
+
 namespace fold {
 
   std::ostream& operator<<(std::ostream& os, const std::vector<bool>& v){
@@ -134,6 +136,15 @@ namespace fold {
 
     os << d.back() << "]";
     return os;
+  }
+
+  
+  uint  getZ3Value(const model& m, const expr& var){
+    expr eval = m.eval(var); 
+    uint val = 0;
+    Z3_bool ok = Z3_get_numeral_uint(eval.ctx(), eval, &val);
+    assert(ok);
+    return val;
   }
 
 

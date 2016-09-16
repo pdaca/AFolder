@@ -9,7 +9,6 @@
 #include <map>
 #include "common.h"
 #include "automata.h"
-#include "z3++.h"
 
 namespace fold {
 
