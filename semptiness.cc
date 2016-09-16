@@ -1086,8 +1086,6 @@ namespace fold {
       addSymbolFormulaConstraint(s2, sf, scons2, tt, symbol_vars[i], "");
       bool new_mode = (mode != prev_mode);
       
-      cout << cma << endl;
-      
       if (new_mode){
 	// the mode changes, so add constrains (counter_value = "value at the end of the previous mode")
 	// set counter values to the value at the end of the previous mode
@@ -1097,8 +1095,6 @@ namespace fold {
 
 	  expr& cnt_var = cnt_vars.at(j);
 	  s2.add(cnt_var == ((int) endval));
-	  cout << "cnt_var(" << j << ")" << cnt_var << endl;
-	  cout << "endval(ctr=" << j << ", mode=" << prev_mode << ")" << endval << endl;
 	  cnt_vars.at(j) = c2.int_val(endval);
 	}
       }
@@ -1120,11 +1116,8 @@ namespace fold {
 	for (uint j=0; j<k; j++){
 	  const expr& start_var = startc_.at(j).at(mode);
 	  uint startval = getZ3Value(m1, start_var);
-	  cout << "startval(ctr=" << j << ", mode=" << mode << ")" << startval << endl;
-	  expr& cnt_var = cnt_vars.at(j);
-	  cout << "cnt_var(" << j << ")" << cnt_var << endl;
-	  	  s2.add(cnt_var == ((int) startval));
-
+	  expr& cnt_var = cnt_vars.at(j);	  
+	  s2.add(cnt_var == ((int) startval));
 	  cnt_vars.at(j) = c2.int_val(startval);
 	}
       }
@@ -1138,8 +1131,6 @@ namespace fold {
       
       expr& cnt_var = cnt_vars.at(j);
       s2.add(cnt_var == ((int) endval));
-      cout << "cnt_var(" << j << ")" << cnt_var << endl;
-      cout << "endval(ctr=" << j << ", mode=" << prev_mode << ")" << endval << endl;
     }
 
 
