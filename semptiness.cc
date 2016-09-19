@@ -941,7 +941,7 @@ namespace fold {
 	pair<state_t, NfaAction> ppr {p, na};
 	auto elem_f = flow_map.find(ppr);
 	const expr& flow_var = elem_f->second;
-	uint flow = getZ3Value(model, flow_var);
+	uint flow = getZ3UintValue(model, flow_var);
 
 	// adds intermediate state;
 	uint w = next_free++;
@@ -1056,7 +1056,7 @@ namespace fold {
 
     vector<expr> scons2(scons_.size(),zero);			// get copy of scons
     for (uint i=0; i<scons_.size(); i++){
-      uint val =  getZ3Value(m1, scons_.at(i));      	
+      int val =  getZ3IntValue(m1, scons_.at(i));      	
       scons2.at(i) = c2.int_val(val);
     }
 
@@ -1091,7 +1091,7 @@ namespace fold {
 	// set counter values to the value at the end of the previous mode
 	for (uint j=0; j<k; j++){
 	  const expr& end_var = endc_.at(j).at(prev_mode);
-	  uint endval =  getZ3Value(m1, end_var);      	
+	  uint endval =  getZ3UintValue(m1, end_var);      	
 
 	  expr& cnt_var = cnt_vars.at(j);
 	  s2.add(cnt_var == ((int) endval));
@@ -1115,7 +1115,7 @@ namespace fold {
 	// set counter value to the value at the begginng of the new mode
 	for (uint j=0; j<k; j++){
 	  const expr& start_var = startc_.at(j).at(mode);
-	  uint startval = getZ3Value(m1, start_var);
+	  uint startval = getZ3UintValue(m1, start_var);
 	  expr& cnt_var = cnt_vars.at(j);	  
 	  s2.add(cnt_var == ((int) startval));
 	  cnt_vars.at(j) = c2.int_val(startval);
@@ -1127,7 +1127,7 @@ namespace fold {
     // add final values
     for (uint j=0; j<k; j++){
       const expr& end_var = endc_.at(j).at(prev_mode);
-      uint endval =  getZ3Value(m1, end_var);      	
+      uint endval =  getZ3UintValue(m1, end_var);      	
       
       expr& cnt_var = cnt_vars.at(j);
       s2.add(cnt_var == ((int) endval));
@@ -1149,7 +1149,7 @@ namespace fold {
     
     for (uint i=0; i<nfa_word.size(); i++){
       const expr& var = symbol_vars.at(i);
-      uint val = getZ3Value(m2, var);
+      int val = getZ3IntValue(m2, var);
       eword[i] = val;
     }
             

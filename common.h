@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <deque>
+#include <stdexcept>
 #include <set>
 #include "z3++.h"
 
@@ -32,7 +33,8 @@ namespace fold {
   std::ostream& operator<<(std::ostream& os, const std::deque<cm_config>& d);
 
   // get variable valuation from a model
-  uint  getZ3Value(const z3::model& m, const z3::expr& var);
+  uint getZ3UintValue(const z3::model& m, const z3::expr& var);
+  int getZ3IntValue(const z3::model& m, const z3::expr& var);
 
 
 }

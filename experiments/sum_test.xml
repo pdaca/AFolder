@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- c1=numer of initial non-zero elements, up to 1024 -->
+<!-- c1=sum1-->
 <function name="loop" counters="1" symbolic="0" modes="2">
 
 

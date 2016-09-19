@@ -5,6 +5,7 @@
 #include "common.h"
 
 using namespace z3;
+using std::invalid_argument;
 
 namespace fold {
 
@@ -139,11 +140,27 @@ namespace fold {
   }
 
   
-  uint  getZ3Value(const model& m, const expr& var){
+  uint  getZ3UintValue(const model& m, const expr& var){
     expr eval = m.eval(var); 
     uint val = 0;
     Z3_bool ok = Z3_get_numeral_uint(eval.ctx(), eval, &val);
-    assert(ok);
+
+    if (!ok){
+      throw invalid_argument("Cannot get value for a variable");
+    }
+
+    return val;
+  }
+
+  int  getZ3IntValue(const model& m, const expr& var){
+    expr eval = m.eval(var); 
+    int val = 0;
+    Z3_bool ok = Z3_get_numeral_int(eval.ctx(), eval, &val);
+
+    if (!ok){
+      throw invalid_argument("Cannot get value for a variable");
+    }
+
     return val;
   }
 
