@@ -35,15 +35,13 @@ using std::chrono::milliseconds;
 using namespace fold;
 using namespace z3;
 
-string USAGE_STR =  " formula.smt functions.xml [-model|-sum|-cmp|-nosfsat|-help] \n\nOPTIONS: \n-model		Generate a model.\n-sum            Allow summing array elements, forbid comparing array elements to variables.\n-cmp		(default) Allow comparing array elements to variables, forbid summing array elements.\n-nosfsat	Do not use sat check to prune parallel composition.\n";
+string USAGE_STR =  " formula.smt functions.xml [-model|-nosfsat|-help] \n\nOPTIONS: \n-model		Generate a model.\n-nosfsat	Do not use sat check to prune parallel composition.\n";
 
 int app_no;
 // Generate model
 bool domodel;
 // Prune unsatisfiable symbolic formulas when doing parallel composition
 bool dosfsat;
-// Allow summation, forbid comparing array elements to variables
-bool allowsum;
 
 /* Get number of counters and symbolic constants of the fold */
 pair<uint, uint> getFoldParams(const string& name){
@@ -314,7 +312,7 @@ void flsat(const char *filesmt, const char *filexml){
 
   auto tmr1  = high_resolution_clock::now();
   map<string, SCM<SymbolFrm>> cm_map;
-  getCms(filexml, cm_map, allowsum);
+  getCms(filexml, cm_map);
   Z3_ast _fml = Z3_parse_smtlib2_file(ctx, filesmt, 0, 0, 0, 0, 0, 0);
   expr fml(ctx, _fml);  
   addTranslatedFormula(fml, s, ecs, arr_names, cm_map);
@@ -381,7 +379,6 @@ int main(int argc, char * argv[]) {
 
   domodel = false;
   dosfsat = true;
-  allowsum = false;
   
   for (int i = 3; i<argc; i++){
     char* arg = argv[i];
@@ -394,12 +391,6 @@ int main(int argc, char * argv[]) {
     }
     else if (strcmp(arg, "-sfsat") == 0){
       dosfsat = true;
-    }
-    else if (strcmp(arg, "-sum") == 0){
-      allowsum = true;
-    }
-    else if (strcmp(arg, "-cmp") == 0){
-      allowsum = false;
     }
     else if ((strcmp(arg, "-help") == 0) || (strcmp(arg, "-h") == 0)){
       cerr << "USAGE: " << argv[0] << USAGE_STR << endl;

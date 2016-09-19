@@ -60,7 +60,8 @@ namespace fold {
       op = Operator::NEQ;
     }
     else {
-      assert(false);
+      cerr << "Error! Unkown operator: " <<  att->Value() << endl;
+      exit(1);
     }
 
     return op;
@@ -82,8 +83,10 @@ namespace fold {
 
     while (att) {
       if (COUNTER_ID_ATT.compare(att->Name()) == 0){
-	if (att->QueryIntValue(&ctr_id) != TIXML_SUCCESS)
-	  assert(false);
+	if (att->QueryIntValue(&ctr_id) != TIXML_SUCCESS){
+	  cerr << "Error parsing " << att->Name() << endl;
+	  exit(1);
+	}
 
 	ctrid_given = true;
       }
@@ -92,22 +95,24 @@ namespace fold {
 	relation_given = true;
       }
       else if (NUMERIC_CONS_ATT.compare(att->Name()) == 0){
-	if (att->QueryIntValue(&num) != TIXML_SUCCESS)
-	  assert(false);
+	if (att->QueryIntValue(&num) != TIXML_SUCCESS){
+	  cerr << "Error parsing " << att->Name() << endl;
+	  exit(1);
+	}
 
 	numeric_given = true;
       }
       else if (SYMBOLIC_CONS_ATT.compare(att->Name()) == 0){
 	if (att->QueryIntValue(&sym_id) != TIXML_SUCCESS){
-	  cerr << att->Name() << endl;
-	  assert(false);
+	  cerr << "Error parsing " << att->Name() << endl;
+	  exit(1);
 	}
 
 	symbolic_given = true;
       }
       else {
 	cerr << "Error: unregonized attribute " << att->Name() << endl;
-	assert(false);
+	exit(1);
       }
       
       att = att->Next();
@@ -125,7 +130,7 @@ namespace fold {
   }
 
 
-  SymbolConstraint getSymbolConstraint(TiXmlNode *node, bool allowsum){
+  SymbolConstraint getSymbolConstraint(TiXmlNode *node){
     TiXmlAttribute* att = node->ToElement()->FirstAttribute();
 
     bool numeric_given = false;
@@ -162,11 +167,6 @@ namespace fold {
 
     assert(relation_given && (numeric_given || symbolic_given)
 	   && (!numeric_given || !symbolic_given));
-
-    if (symbolic_given && allowsum){
-      cerr << "Error: cannot use " << SYMBOLIC_CONS_ATT << " with the -sum option." << endl;
-      assert(false);
-    }
     
     assert(!symbolic_given || (sym_id >= 1));
     Constant cons {symbolic_given, num, (uint) sym_id-1};
@@ -176,7 +176,7 @@ namespace fold {
   }
 
 
-  pair<uint, pair<int, bool> > getUpdatePair(TiXmlNode *node, bool allowsum){
+  pair<uint, pair<int, bool> > getUpdatePair(TiXmlNode *node){
         TiXmlAttribute* att = node->ToElement()->FirstAttribute();
 
     bool numeric_given = false;
@@ -219,11 +219,6 @@ namespace fold {
 	   << NUMERIC_CONS_ATT << ", " << ELEMENT_ATT << endl;
       assert(false);
     }
-
-    if (add_element && !allowsum){
-      cerr << "Error: cannot use " << ELEMENT_ATT << " without the -sum option." << endl;
-      assert(false);
-    }
 	
     assert(ctr_id >= 1);
 
@@ -232,13 +227,69 @@ namespace fold {
     return pr;
   }
 
+
+  // Check that: if updating a counter by an array element then 1)
+  // array element are not compare to a symbolic constant, and 2)
+  // update has a positive/negative guard.
+  bool checkCmAction(const CmAction& cma, const SymbolFrm& sf){
+    const vector<bool>& add_element = cma.add_element();
+    bool is_addelem = false;
+    for (auto it=add_element.begin(); it!=add_element.end() && !is_addelem; it++)
+      is_addelem = is_addelem || *it;
+    
+    if (is_addelem){
+      bool is_sign = false;
+
+      for (auto it=sf.begin(); it!=sf.end(); it++){
+    	const SymbolConstraint& sc = *it;
+    	const Constant& cons = sc.cons();
+
+    	if (cons.is_symbolic()){
+    	  return false;
+    	}
+
+    	int num =  cons.num();
+
+    	switch (sc.op()){
+    	case EQ:
+    	  is_sign = true;
+    	  break;
+
+    	case GT:
+    	  is_sign |= (num >= -1);
+    	  break;
+
+    	case LT:
+    	  is_sign |= (num <= 1);
+    	  break;
+
+    	case GEQ:
+    	  is_sign |= (num >= 0);
+    	  break;
+
+    	case LEQ:
+    	  is_sign |=
+	    (num <= 0);
+	  break;
+
+	default:
+	  break;
+	}
+      }
+
+      if (!is_sign)
+	return false;
+    }
+
+    return true;
+  }
+
   
   void addCmAction(TiXmlNode *node,
 		   uint counters_no,
 		   int mode,
 		   deque<CmAction>& actions,
-		   map<SymbolFrm, uint>& letter_map,
-		   bool allowsum){
+		   map<SymbolFrm, uint>& letter_map){
     set<SCounterConstraint> ccs;
     set<SymbolConstraint> scs;
     vector<int> addition (counters_no);
@@ -251,11 +302,11 @@ namespace fold {
 	ccs.insert(cc);
       }
       else if (SGUARD_TAG.compare(child->Value()) == 0){
-	SymbolConstraint sc = getSymbolConstraint(child, allowsum);
+	SymbolConstraint sc = getSymbolConstraint(child);
 	scs.insert(sc);
       }
       else if (CTR_UPDATE_TAG.compare(child->Value()) == 0){
-	pair<uint, pair<int, bool> > up = getUpdatePair(child, allowsum);
+	pair<uint, pair<int, bool> > up = getUpdatePair(child);
 	pair<int, bool> chg = up.second;	
 	addition[up.first] = chg.first;
 	add_elements[up.first] = chg.second;
@@ -279,6 +330,7 @@ namespace fold {
       else {
 	cerr << "Error unkown tag " << child->Value() << endl;
 	assert(false);
+	exit(1);
       }
     }
 
@@ -294,12 +346,22 @@ namespace fold {
     }
 
     CmAction cma {letter_id, ccs, (uint) succ-1, addition, add_elements};
+
+    bool ok = checkCmAction(cma, scs);
+
+    if (!ok){
+      cerr << "Error! When counter is updated by an array element, then "
+	   << "1) it is not allowed to compare array element to a symbolic constant, "
+	   << "2) update has to be guardeed by positive/negative check." << endl;
+      exit(1);
+    }
+    
     actions.push_back(cma);
   }
 
 
   /* Extract the counter machine for the XML element */
-  void addCm(TiXmlElement *elem, map<string, SCM<SymbolFrm>>& cm_map, bool allowsum) {
+  void addCm(TiXmlElement *elem, map<string, SCM<SymbolFrm>>& cm_map) {
     bool name_given = false;
     bool counters_given = false;
     string name;
@@ -360,7 +422,7 @@ namespace fold {
 	}
 	assert(mode >= 1 && modes <= modes);
 
-	addCmAction(child, counters_no, mode, tr[mode-1], letter_map, allowsum);
+	addCmAction(child, counters_no, mode, tr[mode-1], letter_map);
       }
     }
 
@@ -383,7 +445,7 @@ namespace fold {
   }
 
 
-  void getCms(const char* file, std::map<string, SCM<SymbolFrm>>& cm_map, bool allowsum){
+  void getCms(const char* file, std::map<string, SCM<SymbolFrm>>& cm_map){
     TiXmlDocument doc(file);
     bool ok = doc.LoadFile();
     if (!ok){
@@ -394,7 +456,7 @@ namespace fold {
 
     for (TiXmlNode* child = doc.FirstChild(); child != NULL; child = child->NextSibling()){
       if (FUNCTION_TAG.compare(child->Value()) == 0){
-	addCm(child->ToElement(), cm_map, allowsum);
+	addCm(child->ToElement(), cm_map);
       }
     }
     

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- c1=numer of initial non-zero elements, up to 1024 -->
+<function name="loop" counters="1" symbolic="0" modes="2">
+
+
+  <case mode="1">
+    <symbol_constraint relation="LEQ" numeric="10"/>
+    <symbol_constraint relation="GEQ" numeric="5"/>
+    <ctr_update counter="1" element="1"/>
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="GT" numeric="10"/>
+  </case>
+
+  <case mode="1">
+    <symbol_constraint relation="LT" numeric="5"/>
+  </case>
+
+
+</function>
+
+
+<!-- computes length -->
+<function name="len" counters="1" symbolic="0">
+
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+  
+</function>
+

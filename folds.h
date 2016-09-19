@@ -62,7 +62,7 @@ namespace fold {
 
   /* Parse the XML file to get description of fold functions. Then
      translate the functions into counter machines. */
-  void getCms(const char* file, std::map<std::string, SCM<SymbolFrm>>& cm_map, bool allowsum);
+  void getCms(const char* file, std::map<std::string, SCM<SymbolFrm>>& cm_map);
 
 
 }
