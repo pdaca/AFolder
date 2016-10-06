@@ -46,6 +46,7 @@ namespace fold {
     , endc_{}
     , aparikh_{}
     , scons_{}
+    , scons_srt_{}
     , flow_map_{}
     , sum_map_{}
     , action_map_{}
@@ -79,6 +80,7 @@ namespace fold {
     const std::vector<std::vector<z3::expr>>& endc() const		{ return endc_; }
     const std::vector<z3::expr>& aparikh() const			{ return aparikh_; }
     const std::vector<z3::expr>& scons() const				{ return scons_; }
+    const std::vector<z3::expr>& scons_srt() const			{ return scons_srt_; }
     const std::map<std::pair<state_t, NfaAction>, z3::expr>& flow_map() const
       { return flow_map_; }
     const std::map<std::pair<uint, std::pair<state_t, NfaAction> >, z3::expr>& sum_map() const
@@ -100,7 +102,8 @@ namespace fold {
     std::vector<std::vector<z3::expr>> startc_;
     std::vector<std::vector<z3::expr>> endc_;
     std::vector<z3::expr> aparikh_;
-    std::vector<z3::expr> scons_;
+    std::vector<z3::expr> scons_;							// symbolic constants
+    std::vector<z3::expr> scons_srt_;							// sorted symbolic constants
     std::vector<z3::expr> svars_;							// variables that express symbol values
     std::map<std::pair<state_t, NfaAction>, z3::expr> flow_map_;			// variables for actions' Parikh image
     std::map<std::pair<uint, std::pair<state_t, NfaAction>>, z3::expr> sum_map_;	// variables for actions' total sum

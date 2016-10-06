@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<function name="find" counters="2" symbolic="3" modes="1">
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="EQ" symbolic="2"/>
+    <symbol_constraint relation="EQ" symbolic="3"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="2"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="EQ" symbolic="2"/>
+    <symbol_constraint relation="NEQ" symbolic="3"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="NEQ" symbolic="2"/>
+    <symbol_constraint relation="EQ" symbolic="3"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="EQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="NEQ" symbolic="2"/>
+    <symbol_constraint relation="NEQ" symbolic="3"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="NEQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="EQ" symbolic="2"/>
+    <symbol_constraint relation="EQ" symbolic="3"/>
+    <ctr_update counter="1" numeric="1"/>
+    <ctr_update counter="2" numeric="1"/>
+  </case>
+
+  <case mode="1">
+    <ctr_constraint counter="1" relation="NEQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="EQ" symbolic="2"/>
+    <symbol_constraint relation="NEQ" symbolic="3"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+    <case mode="1">
+    <ctr_constraint counter="1" relation="NEQ" symbolic="1"/>
+    <ctr_constraint counter="1" relation="NEQ" symbolic="2"/>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+
+
+
+
+
+</function>

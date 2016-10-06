@@ -108,7 +108,7 @@ namespace fold {
 
 
   static void addRegionFormula(context &c, solver &s,
-			       const vector<expr>& scons,
+			       const vector<expr>& scons_srt,
   			       const expr &in,
   			       const expr& out,
   			       const set<uint>& cons,
@@ -118,35 +118,68 @@ namespace fold {
 
     if (!cons.empty()){
       addRegionFormula(c, s, in, out, cons);
-    } else {
-      
-      if (symids.empty()){
-	s.add(out == 1);
-	return;
-      }
-      
-      auto it=symids.begin();
-      expr prev = scons.at(*it);
-      s.add(implies(in < prev, out == 1));
-      if (cmp_symid_simple)
-	s.add(implies(in >= prev, out == 2));
-      else
-	s.add(implies(in == prev, out == 2));
-      it++;
-
-      int r = 3;
-      for(; it!=symids.end(); it++){
-	const expr& curr = scons.at(*it);
-	s.add(implies((prev < in) && (in < curr), out == r));
-	r++;
-	s.add(implies(in == curr, out == r ));
-	r++;
-	prev = curr;
-      }
-
-      if (!cmp_symid_simple)
-	s.add(implies(in > prev, out == r));
+      return;
     }
+    
+    if (scons_srt.empty()){
+      s.add(out == 1);
+      return;
+    }
+    
+    // there is at least one symbolic constant
+    expr prev = scons_srt.at(0);
+    int r = 1;
+    s.add(implies(in < prev, out == r));
+    r++;
+    s.add(implies(in == prev, out == r));	    
+    r++;
+    
+    for (uint i=1; i<scons_srt.size(); i++){
+      const expr& curr = scons_srt.at(i);
+      s.add(implies((in > prev) && (in < curr), out == r));
+      r++;
+      s.add(implies((in == curr), out == r));
+      r++;
+      prev = curr;
+    }
+    
+    if (scons_srt.size() > 1){
+      const expr& curr = scons_srt.back();
+      s.add(implies((in > curr), out == r));
+    }
+    
+  }
+
+
+  // Add a formula that maps symbolic constants to sorted symbolic constants.
+  static void addSymbolicConstantFormula(solver& s,
+			 		 const vector<expr>& scons,
+					 const vector<expr>& scons_srt){
+    context& c = s.ctx();
+
+    // every sorted constant equals to some unsorted
+    for (auto it1=scons_srt.begin(); it1!=scons_srt.end(); it1++){
+      expr dis = c.bool_val(false);
+      for (auto it2=scons.begin(); it2!=scons.end(); it2++){
+	dis = dis || ((*it1) == (*it2));	
+      }
+      s.add(dis);
+      cout << dis << endl;
+    }
+
+    // every unsorted constant equals to some sorted
+    for (auto it1=scons.begin(); it1!=scons.end(); it1++){
+      expr dis = c.bool_val(false);
+      for (auto it2=scons_srt.begin(); it2!=scons_srt.end(); it2++){
+	dis = dis || ((*it1) == (*it2));	
+      }
+      s.add(dis);
+      cout << dis << endl;
+    }
+
+    // require sortedness
+    for (uint i=1; i<scons_srt.size(); i++)
+      s.add(scons_srt.at(i-1) <= scons_srt.at(i));
   }
 
 
@@ -158,7 +191,7 @@ namespace fold {
   			     const vector<vector<expr>>& rev,
   			     const vector<vector<expr>>& arr,
   			     const vector<vector<expr>>& startc,
-			     const vector<expr>& scons,
+			     const vector<expr>& scons_srt,
 			     const vector<bool> cmp_symid_simple){
     context& c = s.ctx();
     
@@ -171,14 +204,7 @@ namespace fold {
 
       const expr &reg_var = reg.at(j)[0];
       const expr&  start_var = startc.at(j)[0];
-      addRegionFormula(c, s, scons, start_var, reg_var, const_set, symid_set, simple);
-    }
-
-    // add the constraint that symbolic constants are in non-decreasing order
-    for (uint i=1; i<scons.size(); i++){
-      const expr& sc1 = scons.at(i-1);
-      const expr& sc2 = scons.at(i);
-      s.add(sc1 <= sc2);
+      addRegionFormula(c, s, scons_srt, start_var, reg_var, const_set, symid_set, simple);
     }
   }
 
@@ -303,7 +329,8 @@ namespace fold {
   				const vector<vector<expr>>& startc,
   				const vector<vector<expr>>& endc,
   			        const vector<expr>& aparikh,
-  				const vector<expr>& scons,
+				const vector<expr>& scons,
+  				const vector<expr>& scons_srt,
 				const map<pair<state_t, NfaAction>, expr>& flow_map,
 				map<pair<uint, pair<state_t, NfaAction>>, expr>& sum_map,
 				const map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map,
@@ -447,8 +474,8 @@ namespace fold {
   	const expr& reg_var = reg.at(j).at(i);
   	const expr& start_var = startc.at(j).at(i);
   	const expr& end_var = endc.at(j).at(i);
-	addRegionFormula(c, s, scons, start_var, reg_var, const_set, symid_set, simple);
-  	addRegionFormula(c, s, scons, end_var, reg_var, const_set, symid_set, simple);	  
+	addRegionFormula(c, s, scons_srt, start_var, reg_var, const_set, symid_set, simple);
+  	addRegionFormula(c, s, scons_srt, end_var, reg_var, const_set, symid_set, simple);	  
       }
     }
 
@@ -766,9 +793,12 @@ namespace fold {
 
     // create symbolic constants
     scons_ = vector<expr> (scons_no, ff);
+    scons_srt_ = vector<expr> (scons_no, ff);
     for (uint i=0; i<scons_no; i++){
       string sname = "sym_" + to_string(i) + postfix;
       scons_.at(i) = c.int_const(sname.c_str());
+      string sname_srt = "sym_srt" + to_string(i) + postfix;
+      scons_srt_.at(i) = c.int_const(sname_srt.c_str());
     }
 
     // create variables for symbol letters
@@ -794,10 +824,13 @@ namespace fold {
     }
 
     addParikhFormula(s, nfa_, aparikh_, postfix, flow_map_);
-    addInitFormula(s, k_, cmp_const, cmp_symid, reg_, rev_, arr_, startc_, scons_, cmp_symid_simple);
+    cout << "here1" << endl;
+    addSymbolicConstantFormula(s, scons_, scons_srt_);
+    cout << "here2" << endl;
+    addInitFormula(s, k_, cmp_const, cmp_symid, reg_, rev_, arr_, startc_, scons_srt_, cmp_symid_simple);
     addGoodSeqFormula(s, k_, nmax_, r, cmp_const, cmp_symid, reg_, rev_, arr_);
     addRespectFormula(s, nmax_, cm_, nfa_, cmp_const, cmp_symid, reg_, rev_, arr_,
-    		      startc_, endc_, aparikh_, scons_, flow_map_, sum_map_, action_map_,
+    		      startc_, endc_, aparikh_, scons_, scons_srt_, flow_map_, sum_map_, action_map_,
 		      cmp_symid_simple, postfix);
     addSymbolFormula(s, cm_, postfix, scons_, svars_, flow_map_, action_map_);
   }

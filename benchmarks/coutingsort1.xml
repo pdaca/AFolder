@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<function name="len" counters="1" symbolic="0" modes="1">
+  <case>
+    <ctr_update counter="1" numeric="1"/>
+  </case>
+</function>
+
+
+<function name="cnt" counters="1" symbolic="1" modes="1">
+  <case>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+    <symbol_constraint relation="EQ" symbolic="1"/>
+  </case>
+  
+</function>
