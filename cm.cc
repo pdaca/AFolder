@@ -16,6 +16,7 @@ using std::move;
 
 namespace fold {
 
+
   CounterConstraint::CounterConstraint(uint ctr_idx,
 				       Operator op,
 				       counter_t val)
@@ -93,7 +94,6 @@ namespace fold {
     case NEQ :
       os << "!=";
       break;
-
 
     default :
       os << "?";

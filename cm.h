@@ -10,9 +10,11 @@
 #include "automata.h"
 
 namespace fold {
+  // TODO remove class
 
 
-  enum Operator {EQ, GT, LT, GEQ, LEQ, NEQ};
+
+
 
   
   class CounterConstraint {

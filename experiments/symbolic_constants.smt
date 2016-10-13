@@ -11,6 +11,6 @@
 (declare-const val Int)
 ; check that for A[il] = val A[ih] = val
 (assert (fold_2_3 find A 0 0 j 2 il ih val))
-(assert (= il 5))
-(assert (= ih 2))
-(assert (= val 3))
+(assert (= il 0))
+(assert (= ih 3))
+(assert (= val 2))

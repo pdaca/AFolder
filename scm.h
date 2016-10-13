@@ -8,7 +8,6 @@
 #include <utility>
 #include "common.h"
 #include "automata.h"
-#include "cm.h"
 
 namespace fold {
 
@@ -31,6 +30,9 @@ namespace fold {
     int num() const		{ return num_; }
     uint sym_id() const		{ return sym_id_; }
     bool operator<(const Constant& o) const;
+    bool operator>(const Constant& o) const;
+    bool operator==(const Constant& o) const;
+    bool operator!=(const Constant& o) const;
 
   private:
     bool is_symbolic_;
@@ -152,9 +154,6 @@ namespace fold {
     , tr_{tr}
     , acc_{acc}
     {}
-
-    SCM(CM &&other);
-    SCM(const CM& other);
       
     virtual ~SCM() 			       			{ }
     
@@ -199,25 +198,22 @@ namespace fold {
   SCMInfo(uint tr_size,
 	  const std::vector<std::set<uint>>& cmp_const,
 	  const std::vector<std::set<uint>>& cmp_symid,
-	  const std::vector<bool>& cmp_symid_simple,
-	  const std::set<std::set<SCounterConstraint>>& cmp_set,
+	  const std::vector<std::set<SCounterConstraint>>& ccs_vector,
 	  const std::set<std::pair<uint, int>>& update_set)
     : tr_size_ {tr_size}
     , cmp_const_ {cmp_const}
     , cmp_symid_ {cmp_symid}
-    , cmp_symid_simple_ {cmp_symid_simple}
-    , cmp_set_ {cmp_set}
+    , ccs_vector_ {ccs_vector}
     , update_set_ {update_set}
     {}
     
     virtual ~SCMInfo()	{}
     
     uint tr_size_;
-    std::vector<std::set<uint>> cmp_const_;		// constants in comparison for each counter
-    std::vector<std::set<uint>> cmp_symid_;		// symbolic ids in comparison for each counter
-    std::vector<bool> cmp_symid_simple_;
-    std::set<std::set<SCounterConstraint>> cmp_set_;	// actions constraints
-    std::set<std::pair<uint, int>> update_set_;		// counter updates
+    std::vector<std::set<uint>> cmp_const_;			// constants in comparison for each counter
+    std::vector<std::set<uint>> cmp_symid_;			// ids of unsorted symbolic constant in comparison for each counter
+    std::vector<std::set<SCounterConstraint>> ccs_vector_;	// actions constraints
+    std::set<std::pair<uint, int>> update_set_;			// counter updates
   };
 
   

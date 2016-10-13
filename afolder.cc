@@ -28,6 +28,7 @@ using std::cerr;
 using std::endl;
 using std::flush;
 using std::multimap;
+using std::to_string;
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
@@ -62,20 +63,30 @@ pair<uint, uint> getFoldParams(const string& name){
 
 /* Transerses the formula and replaces fold applications by fresh
    constants */
-expr replaceFolds(const expr& e, solver& s, deque<FoldApplication>& fas){
+expr replaceFolds(const expr& e, solver& s, deque<FoldApplication>& fas, map<string,expr>& var_map){
   assert (e.is_app());
 
   context& ctx = s.ctx();
 
   if (e.is_const()) {
+
+    if (!e.is_numeral() && e.is_int()){
+      string name = e.decl().name().str();
+
+      if (var_map.find(name) == var_map.end()){
+	var_map.insert(std::make_pair(name, e));
+      }
+    }
+    
     return e;
   }
+
 
   func_decl d = e.decl();
   unsigned int sz = e.num_args();
   vector<expr> args;
   for (uint i=0; i<sz; i++){
-    expr ep = replaceFolds(e.arg(i), s, fas);
+    expr ep = replaceFolds(e.arg(i), s, fas, var_map);
     args.push_back(ep);
   }
 
@@ -123,9 +134,9 @@ expr replaceFolds(const expr& e, solver& s, deque<FoldApplication>& fas){
   }
 
   if (d.name().str() == "and"){
-  Z3_ast r = Z3_mk_and(ctx, sz, ast_args);
-  delete ast_args;
-  return expr {ctx, r};
+    Z3_ast r = Z3_mk_and(ctx, sz, ast_args);
+    delete ast_args;
+    return expr {ctx, r};
   }
 
   Z3_ast r = Z3_mk_app(ctx, d, sz, ast_args);
@@ -289,10 +300,13 @@ void addCmFormulas(solver &s,
 void addTranslatedFormula(const expr& fml, solver& s,
 			  vector<SCMEmptinessCheck<SymbolFrm>>& ecs,
 			  vector<string>& arr_names,
-			  map<string, SCM<SymbolFrm>>& cm_map){
+			  map<string, SCM<SymbolFrm>>& cm_map,
+			  map<string,expr>& var_map){
+  
   deque<FoldApplication> fas;
   app_no = 0;
-  expr e = replaceFolds(fml, s, fas);
+  expr e = replaceFolds(fml, s, fas, var_map);
+
 #ifdef INFO
   cout << "original formula" << endl <<fml << endl << endl;
   cout << "formula after replacement: " << endl<< e << endl << endl;
@@ -301,7 +315,7 @@ void addTranslatedFormula(const expr& fml, solver& s,
   s.add(e);
 }
 
-
+ 
 void flsat(const char *filesmt, const char *filexml){
 
   context ctx;
@@ -314,8 +328,9 @@ void flsat(const char *filesmt, const char *filexml){
   map<string, SCM<SymbolFrm>> cm_map;
   getCms(filexml, cm_map);
   Z3_ast _fml = Z3_parse_smtlib2_file(ctx, filesmt, 0, 0, 0, 0, 0, 0);
-  expr fml(ctx, _fml);  
-  addTranslatedFormula(fml, s, ecs, arr_names, cm_map);
+  expr fml(ctx, _fml);
+  map<string, expr> var_map;
+  addTranslatedFormula(fml, s, ecs, arr_names, cm_map, var_map);
 
 #if DEBUG
   cout << s << endl << endl;
@@ -339,25 +354,29 @@ void flsat(const char *filesmt, const char *filexml){
       cout << "Array: " << arr << endl;
       SCMEmptinessCheck<SymbolFrm>& ec = ecs[i];
 #ifdef INFO
-	ec.printModel(m, cout);
+      ec.printModel(m, cout);
 #endif
-      // vector<CmAction> lword = ec.wordFromModel(m);     
-      // cout << endl << "word: " << endl;
-      // for (auto it=lword.begin(); it!=lword.end(); it++){
-      // 	const CmAction& cam = *it;
-      // 	cout << cam << ", " << endl;
-      // }
 	
-	if (domodel){
+	if (domodel){	  	  
 	  auto tmr3  = high_resolution_clock::now();
 	  vector<int> eword = ec.ewordFromModel(m);
 	  model_time =
 	    duration_cast<milliseconds>(high_resolution_clock::now() - tmr3 ).count();	  
 	  cout << "model: " << eword << endl;
-      }
+	}
+	cout << endl;		
+    }
 
+    if (domodel){
+      cout << "Constants:" << endl;
+      for (auto it=var_map.begin(); it!=var_map.end(); it++){
+	const expr& var = it->second;
+	int val = getZ3IntValue(m, var);
+	cout << var << ": \t " << to_string(val) << endl;	
+      }
       cout << endl;
     }
+
   } else {
     cout << "unsat" << endl;
   }

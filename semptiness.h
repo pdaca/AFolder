@@ -10,23 +10,11 @@
 #include <utility>
 #include "common.h"
 #include "automata.h"
-#include "cm.h"
 #include "scm.h"
+#include "semptinessaux.h"
 
 namespace fold {
 
-  //TODO rename
-    // Info about an action that represents a constraint
-  class SCActionInfo {
-  public:
-  SCActionInfo(const std::set<SCounterConstraint>& ccv, uint index)
-    : ccv_{ccv}
-    , index_{index}
-    {};
-
-    const std::set<SCounterConstraint> ccv_;
-    const uint index_;
-  };
 
 
   // Extended version of the procedure from "Model checking recursive
@@ -47,6 +35,7 @@ namespace fold {
     , aparikh_{}
     , scons_{}
     , scons_srt_{}
+    , regions_{}
     , flow_map_{}
     , sum_map_{}
     , action_map_{}
@@ -80,7 +69,8 @@ namespace fold {
     const std::vector<std::vector<z3::expr>>& endc() const		{ return endc_; }
     const std::vector<z3::expr>& aparikh() const			{ return aparikh_; }
     const std::vector<z3::expr>& scons() const				{ return scons_; }
-    const std::vector<z3::expr>& scons_srt() const			{ return scons_srt_; }
+    const std::vector<std::vector<z3::expr>>& scons_srt() const		{ return scons_srt_; }
+    const std::vector<std::list<Region>>& regions() const		{ return regions_; }
     const std::map<std::pair<state_t, NfaAction>, z3::expr>& flow_map() const
       { return flow_map_; }
     const std::map<std::pair<uint, std::pair<state_t, NfaAction> >, z3::expr>& sum_map() const
@@ -102,16 +92,14 @@ namespace fold {
     std::vector<std::vector<z3::expr>> startc_;
     std::vector<std::vector<z3::expr>> endc_;
     std::vector<z3::expr> aparikh_;
-    std::vector<z3::expr> scons_;							// symbolic constants
-    std::vector<z3::expr> scons_srt_;							// sorted symbolic constants
+    std::vector<z3::expr> scons_;							// unsorted symbolic constants
+    std::vector<std::vector<z3::expr>> scons_srt_;				      	// sorted symbolic constants per counter
+    std::vector<std::list<Region>> regions_;						// set of regions for each counter
     std::vector<z3::expr> svars_;							// variables that express symbol values
     std::map<std::pair<state_t, NfaAction>, z3::expr> flow_map_;			// variables for actions' Parikh image
     std::map<std::pair<uint, std::pair<state_t, NfaAction>>, z3::expr> sum_map_;	// variables for actions' total sum
-    std::map<std::pair<state_t, NfaAction>,std::pair<state_t, CmAction>> action_map_;
+    std::map<std::pair<state_t, NfaAction>,std::pair<state_t, CmAction>> action_map_; 
 
-    NFA<CmAction> toNFA(const SCM<T>& cm,
-		    uint nmax,
-		    std::map<std::pair<state_t, NfaAction>,std::pair<state_t, CmAction>>& action_map);
   };
 
 

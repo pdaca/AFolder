@@ -7,14 +7,15 @@
 #include <utility>
 #include <iomanip>
 #include "automata.h"
-#include "semptiness.h"
 #include "parikh.h"
 #include "graph.h"
+#include "semptiness.h"
 
 using std::vector;
 using std::set;
 using std::deque;
 using std::map;
+using std::list;
 using std::to_string;
 using std::cout;
 using std::cerr;
@@ -29,17 +30,6 @@ using namespace z3;
 
 namespace fold {
 
-  static inline state_t toStateId(state_t s, uint mode, uint nmax){
-    return s*nmax + mode;
-  }
-    
-  static inline state_t toStateRev(state_t s, uint nmax){
-    return s/nmax;
-  }
-    
-  static inline uint toModeRev(state_t s,  uint nmax){
-    return s%nmax;
-  }
 
 
   // Create mode variables
@@ -67,144 +57,206 @@ namespace fold {
   }
 
 
-
-  // Add a formula, such that variable "out" contain the region id for variable "in" in the range [1,reg],
-  // where reg is the region size for the for the counter
-  static void addRegionFormula(context &c, solver &s,
-  			       const expr &in,
-  			       const expr& out,
-  			       const set<uint>& const_set){
-    int m = const_set.size();
-    if (m == 0) {
-      s.add(out == 1);
-      return;
+  // Create symbolic constants
+  static void createSymbolicConstants(context& c, uint k, uint scons_no, string postfix,
+				      vector<expr>& scons,
+				      vector<vector<expr>>& scons_srt,
+				      const SCMInfo& info){
+    // create symbolic constants
+    expr ff =  c.bool_val(false);
+    scons = vector<expr> (scons_no, ff);
+    for (uint i=0; i<scons_no; i++){
+      string name = "usymcon_" + to_string(i) + postfix;
+      scons.at(i) = c.int_const(name.c_str());
     }
 
-    int r = 0;
-    auto it=const_set.begin();
-    counter_t prev = *it;
-    if (prev > 0){
-      r++;
-      s.add(implies(in < prev, out == r));
-    }
-    r++;
-    s.add(implies(in == prev, out == r));
-    it++;
-
-    for(; it!=const_set.end(); it++){
-      counter_t curr = *it;
-      r++;
-      s.add(implies(in == curr, out == r));
-      if (curr > prev + 1){
-  	r++;
-  	s.add(implies((prev < in)  && (in < curr), out == r));
+    // create sorted symoblic constants for each counter
+    scons_srt = vector<vector<expr>> (k, vector<expr>());
+    const vector<set<uint>>& cmp_const = info.cmp_const_;
+    const vector<set<uint>>& cmp_symid = info.cmp_symid_;
+    
+    for (uint i=0; i<k; i++){
+      vector<expr>& vct = scons_srt.at(i);
+      uint no = cmp_const.at(i).size() + cmp_symid.at(i).size();
+      for (uint j=0; j<no; j++){
+	string name = "ssymcon_" + to_string(i) + "_" + to_string(j) + postfix;
+	const expr& sc = c.int_const(name.c_str());
+	vct.push_back(sc);
       }
-      prev = curr;
     }
-
-    r++;
-    s.add(implies(in > prev, out == r));
   }
 
 
-  static void addRegionFormula(context &c, solver &s,
-			       const vector<expr>& scons_srt,
-  			       const expr &in,
-  			       const expr& out,
-  			       const set<uint>& cons,
-			       const set<uint>& symids,
-			       bool cmp_symid_simple){
-    assert(cons.empty() || symids.empty());
-
-    if (!cons.empty()){
-      addRegionFormula(c, s, in, out, cons);
-      return;
-    }
-    
-    if (scons_srt.empty()){
-      s.add(out == 1);
-      return;
-    }
-    
-    // there is at least one symbolic constant
-    expr prev = scons_srt.at(0);
-    int r = 1;
-    s.add(implies(in < prev, out == r));
-    r++;
-    s.add(implies(in == prev, out == r));	    
-    r++;
-    
-    for (uint i=1; i<scons_srt.size(); i++){
-      const expr& curr = scons_srt.at(i);
-      s.add(implies((in > prev) && (in < curr), out == r));
-      r++;
-      s.add(implies((in == curr), out == r));
-      r++;
-      prev = curr;
-    }
-    
-    if (scons_srt.size() > 1){
-      const expr& curr = scons_srt.back();
-      s.add(implies((in > curr), out == r));
-    }
-    
-  }
-
-
-  // Add a formula that maps symbolic constants to sorted symbolic constants.
-  static void addSymbolicConstantFormula(solver& s,
-			 		 const vector<expr>& scons,
-					 const vector<expr>& scons_srt){
+  // Add a formula that maps input variable to its region.
+  static void addRegionFormula(solver &s,
+			       const vector<expr>& scons_srt_ctr,
+			       const list<Region>& regions,
+  			       const expr& in,
+  			       const expr& out){    
+    assert(!regions.empty());
     context& c = s.ctx();
 
-    // every sorted constant equals to some unsorted
-    for (auto it1=scons_srt.begin(); it1!=scons_srt.end(); it1++){
-      expr dis = c.bool_val(false);
-      for (auto it2=scons.begin(); it2!=scons.end(); it2++){
-	dis = dis || ((*it1) == (*it2));	
+    int r = 1;
+    for (auto it=regions.begin(); it!=regions.end(); it++, r++){
+      const Region& reg = *it;
+      expr grd = c.bool_val(true);
+
+      if (!reg.l_isinf_){
+	const Constant& l_cnst = reg.l_cnst_;
+	const expr& e = l_cnst.is_symbolic() ?
+	  scons_srt_ctr.at(l_cnst.sym_id()) : c.int_val(l_cnst.num());
+	
+	if (reg.l_incl_)
+	  grd = grd && (in >= e);
+	else
+	  grd = grd && (in > e);
       }
-      s.add(dis);
-      cout << dis << endl;
+
+      if (!reg.u_isinf_){
+	const Constant& u_cnst = reg.u_cnst_;
+	const expr& e = u_cnst.is_symbolic() ?
+	  scons_srt_ctr.at(u_cnst.sym_id()) : c.int_val(u_cnst.num());
+	
+	if (reg.u_incl_)
+	  grd = grd && (in <= e);
+	else
+	  grd = grd && (in < e);
+      }
+
+      s.add(implies(grd, out == r));      
+    }
+    
+    // if (scons_srt_ctr.empty()){
+    //   s.add(out == 1);
+    //   return;
+    // }
+
+    // auto it = scons_srt_ctr.begin();
+    // expr prev = *it;
+    // int r = 1;
+    // s.add(implies(in < prev, out == r));
+    // r++;
+    // s.add(implies(in == prev, out == r));
+    // r++;
+
+    // for (it++; it!=scons_srt_ctr.end(); it++){
+    //   const expr& curr = *it;
+    //   s.add(implies((prev < in)  && (in < curr), out == r));
+    //   r++;
+    //   s.add(implies(curr == in, out == r));
+    //   r++;
+    //   prev = curr;
+    // }
+
+    // s.add(implies(in > prev, out == r));
+  }
+
+  
+
+  // Add a formula that maps symbolic constants to sorted symbolic constants for a particular counter.
+  static void addSymbolicConstantFormulaCounter(solver& s,
+						const vector<expr>& scons,
+						const vector<expr>& scons_srt_ctr,
+						const set<uint>& cmp_const_ctr,
+						const set<uint>& cmp_symid_ctr){
+
+    if (scons_srt_ctr.empty()){
+      return;
     }
 
-    // every unsorted constant equals to some sorted
-    for (auto it1=scons.begin(); it1!=scons.end(); it1++){
+    context& c = s.ctx();
+    // every sorted symbolic constant equals to some unsorted symbolic constant or numeric constant
+    for (auto it1=scons_srt_ctr.begin(); it1!=scons_srt_ctr.end(); it1++){
+      const expr& usc = *it1;
       expr dis = c.bool_val(false);
-      for (auto it2=scons_srt.begin(); it2!=scons_srt.end(); it2++){
-	dis = dis || ((*it1) == (*it2));	
+      for (auto it2=cmp_const_ctr.begin(); it2!=cmp_const_ctr.end(); it2++){
+	int n = *it2;
+	dis = dis || (usc == n);	
       }
+
+      for (auto it2=cmp_symid_ctr.begin(); it2!=cmp_symid_ctr.end(); it2++){
+	const expr& ssc = scons.at(*it2);
+	dis = dis || (usc == ssc);	
+      }      
       s.add(dis);
-      cout << dis << endl;
     }
 
+    // every unsorted  symbolic constant equals to some sorted symbolic constant
+    for (auto it1=cmp_symid_ctr.begin(); it1!=cmp_symid_ctr.end(); it1++){
+      expr dis = c.bool_val(false);
+      const expr& ssc = scons.at(*it1);
+	
+      for (auto it2=scons_srt_ctr.begin(); it2!=scons_srt_ctr.end(); it2++){
+	const expr& usc = *it2;
+	dis = dis || (ssc == usc);
+      }
+      s.add(dis);
+    }
+
+    // every numeric constant equals to some sorted symbolic constant
+    for (auto it1=cmp_const_ctr.begin(); it1!=cmp_const_ctr.end(); it1++){
+      expr dis = c.bool_val(false);
+      int n = *it1;
+      cout << to_string(n) << endl;
+	
+      for (auto it2=scons_srt_ctr.begin(); it2!=scons_srt_ctr.end(); it2++){
+	const expr& usc = *it2;
+	dis = dis || (usc == n);
+      }
+      s.add(dis);
+    }
     // require sortedness
-    for (uint i=1; i<scons_srt.size(); i++)
-      s.add(scons_srt.at(i-1) <= scons_srt.at(i));
+    auto it=scons_srt_ctr.begin();
+    expr prev = *it;
+
+    for (it++; it!=scons_srt_ctr.end(); it++){
+      const expr& curr = *it;
+      s.add(prev <= curr);
+      prev = curr;
+    }
+
+    
+  }
+
+
+    
+  // Add a formula that maps symbolic constants to sorted symbolic constants.
+    static void addSymbolicConstantFormula(solver& s,
+					   const vector<expr>& scons,
+					   const vector<vector<expr>>& scons_srt,
+					   const SCMInfo& info){
+
+      const vector<set<uint>>& cmp_const = info.cmp_const_;
+      const vector<set<uint>>& cmp_symid = info.cmp_symid_;
+      
+      
+    for (uint i=0; i<scons_srt.size(); i++){
+      const vector<expr>& scons_srt_ctr = scons_srt.at(i);
+      const set<uint>& cmp_const_ctr = cmp_const.at(i);
+      const set<uint>& cmp_symid_ctr = cmp_symid.at(i);
+      addSymbolicConstantFormulaCounter(s, scons, scons_srt_ctr, cmp_const_ctr, cmp_symid_ctr);
+    }
   }
 
 
   // Add init formula.
   static void addInitFormula(solver& s, uint k, 
-  			     const vector<set<uint>>& cmp_constants,
-			     const vector<set<uint>>& cmp_symid,
   			     const vector<vector<expr>>& reg,
   			     const vector<vector<expr>>& rev,
-  			     const vector<vector<expr>>& arr,
   			     const vector<vector<expr>>& startc,
-			     const vector<expr>& scons_srt,
-			     const vector<bool> cmp_symid_simple){
-    context& c = s.ctx();
-    
+			     const vector<vector<expr>>& scons_srt,
+			     const vector<list<Region>>& regions){
+
     for (uint j=0; j<k; j++){
-      const set<uint>& const_set = cmp_constants.at(j);
-      const set<uint>& symid_set = cmp_symid.at(j);
-      bool simple = cmp_symid_simple.at(j);
+      // const set<uint>& const_set = cmp_constants.at(j);
+      // const set<uint>& symid_set = cmp_symid.at(j);
+      // bool simple = cmp_symid_simple.at(j);
       const expr &rev_var = rev.at(j)[0];
       s.add(rev_var == 0);
 
-      const expr &reg_var = reg.at(j)[0];
-      const expr&  start_var = startc.at(j)[0];
-      addRegionFormula(c, s, scons_srt, start_var, reg_var, const_set, symid_set, simple);
+      const expr& reg_var = reg.at(j)[0];
+      const expr& start_var = startc.at(j)[0];
+      addRegionFormula(s, scons_srt.at(j), regions.at(j), start_var, reg_var);
     }
   }
 
@@ -321,21 +373,18 @@ namespace fold {
   static void addRespectFormula(solver& s, uint nmax,
 				const SCM<T>& cm,
 				const NFA<CmAction>& nfa,
-  				const vector<set<uint>> cmp_constants,
-  				const vector<set<uint>> cmp_symid,
   				const vector<vector<expr>>& reg,
-  				const vector<vector<expr>>& rev,
   				const vector<vector<expr>>& arr,
   				const vector<vector<expr>>& startc,
   				const vector<vector<expr>>& endc,
   			        const vector<expr>& aparikh,
 				const vector<expr>& scons,
-  				const vector<expr>& scons_srt,
+  				const vector<vector<expr>>& scons_srt,
+				const vector<list<Region>>& regions,
 				const map<pair<state_t, NfaAction>, expr>& flow_map,
 				map<pair<uint, pair<state_t, NfaAction>>, expr>& sum_map,
 				const map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map,
-				const vector<bool> cmp_symid_simple,
-				string postfix){
+				string postfix){ 
 
     context& c = s.ctx();
     uint states_no = nfa.states_no();
@@ -465,17 +514,13 @@ namespace fold {
     }
 
     // constraints that related start and end counter values to their regions	
-    for (uint j=0; j<k; j++){
-      const set<uint>& const_set = cmp_constants.at(j);
-      const set<uint>& symid_set = cmp_symid.at(j);
-      bool simple = cmp_symid_simple.at(j);
-      
+    for (uint j=0; j<k; j++){      
       for (uint i=0; i<nmax; i++){
   	const expr& reg_var = reg.at(j).at(i);
   	const expr& start_var = startc.at(j).at(i);
   	const expr& end_var = endc.at(j).at(i);
-	addRegionFormula(c, s, scons_srt, start_var, reg_var, const_set, symid_set, simple);
-  	addRegionFormula(c, s, scons_srt, end_var, reg_var, const_set, symid_set, simple);	  
+	addRegionFormula(s, scons_srt.at(j), regions.at(j), start_var, reg_var);
+  	addRegionFormula(s, scons_srt.at(j), regions.at(j), end_var, reg_var);
       }
     }
 
@@ -553,7 +598,6 @@ namespace fold {
   				  uint k, uint nmax,
   				  uint r,
   				  const vector<set<uint>>& cmp_constants,
-  				  const vector<set<uint>>& cmp_symids,
   				  const vector<vector<expr>>& reg,
   				  const vector<vector<expr>>& rev,
   				  const vector<vector<expr>>& arr){
@@ -602,28 +646,6 @@ namespace fold {
   }
 
   
-  // // Counts regions for numeric constants.
-  static uint regionsNo(const set<uint>& cons){
-    uint r = cons.size();
-    if (r == 0)
-      return 1;
-    
-    auto it=cons.begin();
-    uint prev = *it;
-    if (prev > 0)
-      r++;	
-    it++;
-      
-    for(; it!=cons.end(); it++){
-      uint curr = *it;
-      if (curr > prev + 1)
-  	r++;
-      prev = curr;
-    }
-    return r+1;
-  }
-
-
   // Add constraint that b_svar <-> sf is sat
   static void addSymbolFormulaConstraint(solver& s,
 					 const SymbolFrm& sf,
@@ -709,26 +731,7 @@ namespace fold {
     }
   }
 
-
-  // TODO be more precise
-  static uint regionsNo(const set<uint>& cons,
-  			const set<uint>& symids,
-			bool symid_simple){
-    assert(cons.empty() || symids.empty());
-
-    if (!cons.empty()){
-      return regionsNo(cons);
-    } else {
-      if (symid_simple)
-	return 2;	// constraints are complementary
-      else
-	return 2*symids.size() + 1;
-    }
-  }
-
-				// 
-
-
+  
   template<>
   void SCMEmptinessCheck<SymbolFrm>::addEmptinessFormula(solver& s, 
 					      uint r,
@@ -740,28 +743,39 @@ namespace fold {
     
     const vector<set<uint>>& cmp_const = info.cmp_const_;
     const vector<set<uint>>& cmp_symid = info.cmp_symid_;
-    const vector<bool>& cmp_symid_simple = info.cmp_symid_simple_;
-    const set<set<SCounterConstraint>>& cons_set = info.cmp_set_;
+    const vector<set<SCounterConstraint>>& ccs_vector = info.ccs_vector_;
 
     // Assume that each counter uses either numeric or symbolic
     // comparisons, and that all symbolic values are sorted. TODO:
     // relax this
     for (uint j=0; j<k_; j++){
-      assert(cmp_const.at(j).empty() || cmp_symid.at(j).empty());
+      //assert(cmp_const.at(j).empty() || cmp_symid.at(j).empty());
     }
 
+    // create symbolic constants
+    createSymbolicConstants(c, k_, scons_no, postfix, scons_, scons_srt_, info);
+
+    // create regions and calculate the number of moves per reveral
+    //regions_ = vector<list<Region> > (k_, list<Region>()); 
+    
     uint movesno = 0;		// number of move changes per reversal
-    vector<uint> moves (k_);
     for (uint i=0; i<k_; i++){
-      moves.at(i) = regionsNo(cmp_const.at(i), cmp_symid.at(i), cmp_symid_simple.at(i));
-      movesno += moves.at(i)-1;
+      list<Region> lst;
+      regionsNo(i, scons_srt_.at(i), info, lst);
+      regions_.push_back(lst);
+      movesno += lst.size()-1;
+#ifdef INFO
+      cout << "Regions for counter: " << to_string(i) << endl;
+      cout << regions_.at(i) << endl << endl;
+#endif
     }
 
     nmax_ = 1+movesno*(r+1);
 
+
 #ifdef INFO
     cout << "Check CM emptiness" << endl
-	 << "k="<< k_ << ", r=" << r << ", moves per counter=" << moves
+	 << "k="<< k_ << ", r=" << r 
 	 << ", nmax=" << nmax_ << ", tr_size= " << info.tr_size_ << endl;
     cout << "cmp constants: " << endl;
     for (uint j=0; j<k_; j++){
@@ -772,7 +786,7 @@ namespace fold {
       cout << "c_" << j << " = " << cmp_symid.at(j) << endl;
     }
     cout << "guards:" ;
-    for (auto it=cons_set.begin(); it!=cons_set.end(); it++){
+    for (auto it=ccs_vector.begin(); it!=ccs_vector.end(); it++){
       const set<SCounterConstraint>& ccs = *it;
       cout << "[";
       for (auto itc=ccs.begin(); itc!=ccs.end(); itc++){
@@ -791,16 +805,6 @@ namespace fold {
     endc_ = vector<vector<expr>>(k_,vector<expr>(nmax_, ff));
     createModeVars(c, k_, nmax_, postfix, reg_, rev_, arr_, startc_, endc_);
 
-    // create symbolic constants
-    scons_ = vector<expr> (scons_no, ff);
-    scons_srt_ = vector<expr> (scons_no, ff);
-    for (uint i=0; i<scons_no; i++){
-      string sname = "sym_" + to_string(i) + postfix;
-      scons_.at(i) = c.int_const(sname.c_str());
-      string sname_srt = "sym_srt" + to_string(i) + postfix;
-      scons_srt_.at(i) = c.int_const(sname_srt.c_str());
-    }
-
     // create variables for symbol letters
     uint alphabet_no = cm_.alphabet().size();
     
@@ -814,7 +818,6 @@ namespace fold {
     //create NFA
     nfa_ = toNFA(cm_, nmax_, action_map_);
     uint alpha_nfa_no = nfa_.alphabet_no();
-
     // create parikh variables
     expr zero = c.int_val(0);
     aparikh_ = vector<expr> (alpha_nfa_no, zero);
@@ -822,175 +825,20 @@ namespace fold {
       string name = "a_" + to_string(i) + postfix;
       aparikh_.at(i) = c.int_const(name.c_str());
     }
-
     addParikhFormula(s, nfa_, aparikh_, postfix, flow_map_);
-    cout << "here1" << endl;
-    addSymbolicConstantFormula(s, scons_, scons_srt_);
-    cout << "here2" << endl;
-    addInitFormula(s, k_, cmp_const, cmp_symid, reg_, rev_, arr_, startc_, scons_srt_, cmp_symid_simple);
-    addGoodSeqFormula(s, k_, nmax_, r, cmp_const, cmp_symid, reg_, rev_, arr_);
-    addRespectFormula(s, nmax_, cm_, nfa_, cmp_const, cmp_symid, reg_, rev_, arr_,
-    		      startc_, endc_, aparikh_, scons_, scons_srt_, flow_map_, sum_map_, action_map_,
-		      cmp_symid_simple, postfix);
+    addSymbolicConstantFormula(s, scons_, scons_srt_, info);
+    addInitFormula(s, k_, reg_, rev_, startc_, scons_srt_, regions_);
+    addGoodSeqFormula(s, k_, nmax_, r, cmp_const, reg_, rev_, arr_);
+    addRespectFormula(s, nmax_, cm_, nfa_,  reg_, arr_,
+    		      startc_, endc_, aparikh_, scons_, scons_srt_, regions_, flow_map_, sum_map_, action_map_, postfix);
     addSymbolFormula(s, cm_, postfix, scons_, svars_, flow_map_, action_map_);
   }
 
 
 
-  
-
-  template <typename T>
-    NFA<CmAction> SCMEmptinessCheck<T>::toNFA(const SCM<T>& cm,
-					      uint nmax,
-					      map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map){
-
-    
-    uint states_no_cm = cm.states_no();
-    const vector<deque<CmAction>>& tr_cm = cm.tr();
-    const set<state_t>& acc_cm = cm.accepting();
-    state_t init_cm = cm.init_state();
-	  
-    uint states_no = nmax * states_no_cm;
-
-    // construct accepting and init
-    state_t init = toStateId(init_cm, 0, nmax);
-    set<state_t> acc;
-    for (auto it=acc_cm.begin(); it!=acc_cm.end(); it++){
-      state_t s=*it;
-   
-      for(uint i=0; i<nmax; i++){
-	acc.insert(toStateId(s, i, nmax));
-      }      
-    }
-
-    vector<CmAction> alphabet;
-    // construct transition relation and fill action_map
-    vector<deque<NfaAction>> tr (states_no);
-    uint next_free = 0;
-
-    for (uint p=0; p<states_no_cm; p++){
-      const deque<CmAction>& trans = tr_cm.at(p);
-
-      for (auto it=trans.begin(); it!=trans.end(); it++, next_free++){
-	const CmAction& cam = *it;
-	state_t q = cam.succ();
-
-	alphabet.push_back(cam);
-
-	pair<state_t, CmAction> spr{p, cam};
-
-	for (uint i=0; i<nmax; i++){
-	  state_t p_nfa = toStateId(p, i, nmax);
-
-	  // transiton in the same mode
-	  state_t q_nfa = toStateId(q, i, nmax);
-	  NfaAction na {next_free, q_nfa};
-	  tr[p_nfa].push_back(na);
-
-	  pair<state_t, NfaAction> ppr{p_nfa, na};
-	  action_map.insert(make_pair(ppr, spr));
-
-	  if (i == nmax - 1)
-	    continue;
-
-	  // transition to the next mode
-	  state_t q_nfa2 = toStateId(q, i+1, nmax);
-	  NfaAction na2 {next_free, q_nfa2};
-	  tr[p_nfa].push_back(na2);
-
-	  pair<state_t, NfaAction> ppr2{p_nfa, na2};
-	  action_map.insert(make_pair(ppr2, spr));
-	}
-      }
-    }
-
-    NFA<CmAction> control_nfa {states_no, init, alphabet, tr, acc};
-
-#ifdef DEBUG
-    cout << endl;
-    cout << "NFA states no=" << states_no << endl;
-    cout << control_nfa << endl;
-    control_nfa.check();
-#endif
-    
-    return move(control_nfa);
-  }
-
-
-  static void printVars(const model &model, std::ostream& os,
-			uint k, uint nmax, uint WIDTH,
-		       const vector<vector<expr>> vars, 
-		       string name ){
-
-    os << std::left << setw(WIDTH) << name << "|";
-    
-    for (uint i=0; i<nmax; i++){
-      os << setw(WIDTH) << ("m"+to_string(i)) << "|";
-    }
-    os << endl;
-
-    for (uint j=0; j<k; j++){
-      os << setw(WIDTH) << ("c"+to_string(j)) << "|";
-      for (uint i=0; i<nmax; i++){
-	const expr& var = vars.at(j).at(i);
-	os << setw(WIDTH) << model.eval(var) << "|";
-      }
-      os << endl;
-    }
-  }
 
 
 
-  // Construct a weighted graph from the NFA and the model.  The
-  // graph consists of the NFA states, and the weighted of edges is
-  // taken from the model.
-  static WeightedLabeledGraph<uint> constructGraph(const model& model,
-						   const NFA<CmAction>& nfa,
-						   uint nmax,
-						   const map<pair<state_t, NfaAction>, expr>& flow_map,
-						   const map<pair<state_t, NfaAction>,pair<state_t, CmAction>>& action_map){
-
-    // map transition of NFA to new states;
-
-    uint states_no = nfa.states_no() + action_map.size()+1;
-    uint next_free = nfa.states_no();
-    map<pair<uint,uint>, uint> weight;
-    map<pair<uint,uint>, uint> labels;
-
-    // doesnt matter
-    vector<uint> alphabet{};
-    
-    const vector<deque<NfaAction>>& tr = nfa.tr();
-    
-    for (uint p=0; p<nfa.states_no(); p++){
-      const deque<NfaAction>& trans = tr.at(p);
-
-      uint i=0;
-      for (auto it=trans.begin(); it!=trans.end(); it++){
-	const NfaAction& na = *it;
-
-	state_t q = na.succ();
-
-	pair<state_t, NfaAction> ppr {p, na};
-	auto elem_f = flow_map.find(ppr);
-	const expr& flow_var = elem_f->second;
-	uint flow = getZ3UintValue(model, flow_var);
-
-	// adds intermediate state;
-	uint w = next_free++;
-
-	weight[make_pair(p,w)] = flow;
-	weight[make_pair(w,q)] = flow;
-	// labels saves the number of the NFA transition from state p
-	labels[make_pair(p,w)] = i;
-	i++;
-      }
-    }
-    
-    WeightedLabeledGraph<uint> graph(states_no, weight, labels, alphabet);
-
-    return move(graph);
-  }
 
 
 
@@ -1194,6 +1042,7 @@ namespace fold {
   void SCMEmptinessCheck<T>::printModel(const model& model, std::ostream& os){
     const uint WIDTH = 10;
 
+    os << "Mode variables" << endl;
     printVars(model, os, k_, nmax_, WIDTH, startc_, "start");
     os << endl;
     printVars(model, os, k_, nmax_, WIDTH, endc_, "end");
@@ -1203,6 +1052,18 @@ namespace fold {
     printVars(model, os, k_, nmax_, WIDTH, rev_, "rev");
     os << endl;
     printVars(model, os, k_, nmax_, WIDTH, arr_, "arr");
+    os << endl;
+
+    os << "Sorted counter symbolic constants" << endl;
+    for (uint i=0; i<k_; i++){
+      os << setw(WIDTH) << ("c"+to_string(i)+":");
+      const vector<expr>& lst = scons_srt_.at(i);      
+      for (auto it=lst.begin(); it!=lst.end(); it++){
+	const expr& var = *it;
+	os << model.eval(var) << ", ";
+      }
+      os << endl;
+    }
     os << endl;
 
 #if 0

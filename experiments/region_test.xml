@@ -3,7 +3,7 @@
 <!-- c1=sum, c2=c -->
 <function name="foo" counters="3" symbolic="3" modes="1">
 
-
+  <!-- 12 regions -->
   <case mode="1">
     <ctr_constraint counter="1" relation="LEQ" numeric="4"/>
     <ctr_constraint counter="1" relation="EQ" numeric="5"/>
@@ -23,22 +23,24 @@
     <ctr_constraint counter="1" relation="GT" numeric="42"/>
   </case>
 
+
+  <!-- 7 region -->
   <case mode="1">
     <ctr_constraint counter="2" relation="LEQ" symbolic="1"/>
+    <ctr_constraint counter="2" relation="GT" symbolic="1"/>
     <ctr_constraint counter="2" relation="EQ" symbolic="2"/>
     <ctr_constraint counter="2" relation="GEQ" symbolic="3"/>
-    <ctr_constraint counter="2" relation="GT" symbolic="1"/>
   </case>
 
+  <!-- 3 region -->
   <case mode="1">
     <ctr_constraint counter="3" relation="LEQ" symbolic="1"/>
-    <ctr_constraint counter="3" relation="EQ" symbolic="2"/>
-    <ctr_constraint counter="3" relation="GEQ" symbolic="3"/>
     <ctr_constraint counter="3" relation="GT" symbolic="1"/>
 
     <ctr_constraint counter="3" relation="LEQ" numeric="4"/>
-    <ctr_constraint counter="3" relation="EQ" numeric="5"/>
-    <ctr_constraint counter="3" relation="GEQ" numeric="6"/>
+    <ctr_constraint counter="3" relation="GT" numeric="4"/>
+
+
   </case>
   
 </function>

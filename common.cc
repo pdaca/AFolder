@@ -9,6 +9,41 @@ using std::invalid_argument;
 
 namespace fold {
 
+  std::ostream& operator<<(std::ostream& os, Operator op){
+    switch (op){
+    case EQ :
+      os << "=";
+      break;
+      
+    case GT :
+      os << ">";
+      break;
+      
+    case LT :
+      os << "<";
+      break;
+      
+    case LEQ :
+      os << "<=";
+      break;
+      
+      
+    case GEQ :
+      os << ">=";
+      break;
+      
+    case NEQ :
+      os << "!=";
+      break;
+      
+    default :
+      os << "?";
+    }
+    
+    return os;
+  }
+
+  
   std::ostream& operator<<(std::ostream& os, const std::vector<bool>& v){
     if (v.size() == 0){
       return os << "[]";

@@ -43,6 +43,22 @@ namespace fold {
 
     return false;
   }
+
+  
+  bool Constant::operator>(const Constant& o) const {
+    return (o < *this);
+  }
+
+
+  bool Constant::operator==(const Constant& o) const {
+    return !((o < *this) || (*this < o));
+  }
+
+  
+  bool Constant::operator!=(const Constant& o) const {
+    return ((o < *this) || (*this < o));
+  }
+
   
 
   std::ostream& operator<<(std::ostream& os, const Constant& cons){
@@ -85,36 +101,7 @@ namespace fold {
 
   std::ostream& operator<<(std::ostream& os, const SCounterConstraint& cc) {
     os << "c_" << cc.ctr_id();
-
-    switch (cc.op_){
-    case EQ :
-      os << "=";
-      break;
-
-    case GT :
-      os << ">";
-      break;
-
-    case LT :
-      os << "<";
-      break;
-
-    case GEQ :
-      os << ">=";
-      break;
-
-    case LEQ :
-      os << "<=";
-      break;
-
-    case NEQ :
-      os << "!=";
-      break;
-
-    default :
-      os << "?";
-    }
-
+    os << cc.op_;
     return os << cc.cons_;
   }
 
@@ -522,9 +509,8 @@ namespace fold {
     uint tr_size = 0;
     std::vector<std::set<uint>> cmp_const (counters_no);
     std::vector<std::set<uint>> cmp_symid (counters_no);
-    std::vector<bool> cmp_symid_simple (counters_no);
     std::vector<uint> cmp (counters_no);
-    std::set<std::set<SCounterConstraint>> cmp_set;
+    std::vector<std::set<SCounterConstraint>> ccs_vector (counters_no);
     std::set<std::pair<uint, int>> update_set;
 
     for (uint s=0; s<tr.size(); s++){
@@ -535,11 +521,12 @@ namespace fold {
 	const CmAction& cma = *it;
 
 	const std::set<SCounterConstraint>& ccs = cma.counter_constraints();
-	cmp_set.insert(ccs);
 
 	for (auto itc=ccs.begin(); itc!=ccs.end(); itc++){
 	  const SCounterConstraint& cc = *itc;
 	  uint ctr = cc.ctr_id();
+	  ccs_vector.at(ctr).insert(cc);
+	  
 	  cmp[ctr] |= (1 << cc.op());
 	  Constant cons = cc.cons();
 	  if (cons.is_symbolic()){	    
@@ -557,13 +544,9 @@ namespace fold {
       }
     }
 
-    for (uint c=0; c<counters_no; c++){
-      if ((cmp[c] == 12) && (cmp_symid[c].size() == 1)){
-	cmp_symid_simple[c] = true;
-      }
-    }
+
     
-    SCMInfo info {tr_size, cmp_const, cmp_symid, cmp_symid_simple, cmp_set, update_set};
+    SCMInfo info {tr_size, cmp_const, cmp_symid, ccs_vector, update_set};
     return info;
   }
 
